@@ -1,16 +1,3 @@
-# Documentation HTML Template
-A Sample HTML Documentation Template for Wordpress Themes, HTML Templates and Plugins. Built with Bootstrap 3. 
+# DTI Pipeline Documentation- University of Michigan CPFRC
 
-## Installation
-Download the package as ZIP and edit the HTML and CSS as you like.
-
-## Demo
-Click this link for a live demo : http://surjithctly.github.io/documentation-html-template/
-
-## Donations & Support
-My Brain needs two urgent coffee to continue working. Buy me a coffee or two here: https://opencollective.com/documentation-template
-
-## Credits
-This is a modified version of [Template Visual's](http://themeforest.net/user/templatevisual?ref=surjithctly&utm_source=github_surjithctly_docs) Documentation : Actual Documentation Link : http://goo.gl/RVwdHE
-
-Browser Testing by [Browserstack](https://www.browserstack.com/)
+This documentation aims to serve as a guide for using the CPFRC DTI pipeline. The steps include everything from starting with the raw data from the fMRI Lab to creating a connectome for invidual subjects. Our pipeline draws heavily from the tutorial by Andy Jahn which can be found here. It has been modified for our computing environment and largely transposed into Python. That being said, most of what's found here is broadly applicable beyond the CPFRC environment.
