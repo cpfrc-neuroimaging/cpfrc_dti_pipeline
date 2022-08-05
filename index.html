@@ -161,7 +161,7 @@
                                             <p>You will need the following sofware packages to follow this pipeline:</p>
                                             <ol>
                                                 <li>Python version >= 3.8 </li>
-                                                <li>MRtrix version 3.0_RC3 (install <a href="https://mrtrix.readthedocs.io/en/latest/installation/before_install.html" target="_blank">instructions</a>)</li>
+                                                <li>MRtrix version 3.0.3 (install <a href="https://mrtrix.readthedocs.io/en/latest/installation/before_install.html" target="_blank">instructions</a>)</li>
                                                 <li>FSL version >= 6.0.0 (install <a href="https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FslInstallation" target="_blank">instructions</a>)</li>
                                                 <li>Freesurfer version >= 6.0 (install <a href="https://surfer.nmr.mgh.harvard.edu/fswiki/DownloadAndInstall" target="_blank">instructions</a>)</li>
                                                 <li>ANTs (install <a href="http://stnava.github.io/ANTs/" target="_blank">instructions</a>)</li>
@@ -195,31 +195,20 @@
 
                                 <p>To use MRtrix both on the server and Armis, we will use the same commands: <strong>module load mrtrix</strong> and <strong>module load fsl/6.0.3</strong>. If you're working on the server the <strong>module list</strong> command should list mrtrix/3.0_RC3 and fsl/6.0.3 as loaded modules. If you're working on Armis, the loading of the fsl and cuda modules is actually baked into the <strong>module load mrtrix</strong> command, so you should see three modules including: fsl/6.0.5.1, cuda/10.2.89 and mrtrix/3.0.3 after running module load mrtrix. If you do not see all of these modules loaded, please connact Bennet Fauber at HITS (bennet@umich.edu).
 
-                                </p> 
+                                </p>
 
                                 <h4>Data Organization</h4>
 
-                                <p>Our you can use the grid system with 3 columns like this;</p>
+                                <p>The organization of data may vary from project to project. Here I will describe what was used for the explosive sync study as of August 2022.
+                                </p>
 
-                                <pre class="brush: html">
-                            <div class="container">
-                                <div class="row">
-                                    <div class="col-lg-4 col-md-6 col-sm-6 col-xs-12">
-                                        YOUR CODES GOES HERE
-                                    </div>
-                                    <div class="col-lg-4 col-md-6 col-sm-6 col-xs-12">
-                                        YOUR CODES GOES HERE
-                                    </div>
-                                    <div class="col-lg-4 col-md-6 col-sm-6 col-xs-12">
-                                        YOUR CODES GOES HERE
-                                    </div>
-                                </div>
-                            </div>
-                         </pre>
-                            </div>
-                            <!-- end col -->
-                        </div>
-                        <!-- end row -->
+                                <p>All subejct data comes to us via the fMRI Lab on North Campus and ends up in a directory labeled 'raw'. 
+                                    In each subject's directory, there are several files and directories. For our purposes here, we are only interested in the 'DTI' and 'anatomy' directories. Within the 'DTI' directory, we will find several files that we need for our analyses. We will talk specifically about those files in subsequent sections. The most important thing for now is that you have DTI data. <br>Within the anatomy directory, you will probably see several directories. We are interested in the 't1spgr_208sl' directory, which is where our subject's T1 data is stored. Within the 't1spgr_208sl' directory, locate the <strong>t1spgr_208sl.nii</strong> file. If you don't see it, look around in other directories and then contact Scott Peltier (spelt@med.umich.edu) from the fMRI Lab if necessary.
+                                </p>
+
+                                <p>Once you've verified that you have both DTI and anatomical data, go back to the main study directory. An example of this would be something like: /PROJECTS/REHARRIS/explosives Once there, create a directory called 'dtiProc'. This will be where all the processed DTI data will be stored. Within dtiProc, create a subs directory and a scripts directory. Within the subs directory, each subject's dti, antomical and fieldmap data will be stored. Don't worry about creating those directories manually, they will be done automatically later. The majority of the commands that we run on the server will be executed on data stored in dtiProc as to not corrupt the raw data. Within the scripts directory, feel free to copy the scripts from this documentation, make any necessary edits, and save them in your scripts directory.
+                                </p>
+                            
 
                     </section>
                     <!-- end section -->
@@ -233,6 +222,9 @@
                             <!-- end col -->
                         </div>
                         <!-- end row -->
+
+                        <p>Because of a recent update to the scanner software from GE, the first thing we have to do is create fieldmaps for each of our subjects. To do so, we will be using various fsl commands. In addition to creating fieldmaps for each subject, we also have to copy over the appropriate bval and bvec files. The bval and bvec files found in the 'DTI' folder are inaccurate, so we will be using bval and bvec files originally from the ABCD study that have been modified for our needs. As a general rule, the number of lines in your bval and bvec files should match the number of volumes in your diffusion data. If you'd like to see an example of bval and bvec files, download <a href="abcd/abcd_example.zip" download="example">here</a>.
+                        </p>
 
                         <h4>Create Field Map Script</h4>
 
@@ -253,6 +245,34 @@ import time
 dtiProc = "/PROJECTS/REHARRIS/explosives/dtiProc"
 subDir = "/PROJECTS/REHARRIS/explosives/raw/"
 dicomPath = "/DTI"
+
+
+# verify that all the necessary modules have been loaded
+
+def verifyModules():
+    print("Modules loaded:")
+    os.system("module list")
+    while True:
+            loaded = input(f"\n{bcolors.WARNING}For this script, you need the fsl module loaded.\nIs it listed above? If so, type yes and hit enter. \nIf not, please type no and hit enter.\n{bcolors.ENDC}")
+            if loaded == "yes" or loaded == "y" or loaded == "Yes" or loaded == "YES":
+                print("great! running script...")
+                break
+            elif loaded == "no" or loaded == "n" or loaded == "No" or loaded == "NO":
+                print("\nplease load fsl using the following command:\n")
+                print("module load fsl/6.0.3\n")
+                print("after loading the module, relaunch the script")
+                sys.exit()
+
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
 
 
 # get a list of all the subjects that have been processed with the new software
