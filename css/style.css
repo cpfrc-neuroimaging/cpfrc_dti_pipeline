@@ -136,6 +136,7 @@ blockquote small {
 }
 
 pre {
+    white-space: pre-wrap;
     line-height: 18px;
     margin-bottom: 18px;
 }

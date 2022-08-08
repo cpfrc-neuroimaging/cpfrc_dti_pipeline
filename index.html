@@ -17,7 +17,7 @@
 
     <title>CPFRC DTI Pipeline Documentation | University of Michigan</title>
 
-    <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="images/UM.ico" type="image/x-icon">
 
     <link rel="stylesheet" type="text/css" href="fonts/font-awesome-4.3.0/css/font-awesome.min.css">
     <link rel="stylesheet" type="text/css" href="css/stroke.css">
@@ -154,7 +154,7 @@
 
                                         <hr>
                                         <div>
-                                            <p>This documentation aims to serve as a guide for using the CPFRC DTI pipeline. The steps include everything from starting with the raw data from the fMRI Lab to creating a connectome for invidual subjects. Our pipeline draws heavily from the tutorial by Andy Jahn which can be found <a href="https://andysbrainbook.readthedocs.io/en/latest/MRtrix/MRtrix_Introduction.html" target="_blank">here</a>. It has been modified for our computing environment and largely transposed into Python. That being said, most of what's found here is broadly applicable beyond the CPFRC environment. 
+                                            <p>This documentation aims to serve as a guide for using the CPFRC DTI pipeline. The steps include everything from starting with the raw data from the fMRI Lab to creating a connectome for invidual subjects. Our pipeline draws heavily from the tutorial by Andy Jahn which can be found <a href="https://andysbrainbook.readthedocs.io/en/latest/MRtrix/MRtrix_Introduction.html" target="_blank">here</a>. It has been modified for our computing environment and largely transposed into Python. That being said, most of what's found here is broadly applicable beyond the CPFRC computing environment. 
                                             </p>
 
                                             <h4>Software Requirements</h4>
@@ -223,14 +223,19 @@
                         </div>
                         <!-- end row -->
 
-                        <p>Because of a recent update to the scanner software from GE, the first thing we have to do is create fieldmaps for each of our subjects. To do so, we will be using various fsl commands. In addition to creating fieldmaps for each subject, we also have to copy over the appropriate bval and bvec files. The bval and bvec files found in the 'DTI' folder are inaccurate, so we will be using bval and bvec files originally from the ABCD study that have been modified for our needs. As a general rule, the number of lines in your bval and bvec files should match the number of volumes in your diffusion data. If you'd like to see an example of bval and bvec files, download <a href="abcd/abcd_example.zip" download="example">here</a>.
+                        <p>Because of a recent update to the scanner software from GE, the first thing we have to do is create fieldmaps for each of our subjects. To do so, we will be using various fsl commands. In addition to creating fieldmaps for each subject, we also have to copy over the appropriate bval and bvec files. The bval and bvec files found in the 'DTI' folder are incorrect, so we will be using bval and bvec files originally from the ABCD study that have been modified for our needs. As a general rule, the number of lines in your bval and bvec files should match the number of volumes in your diffusion data. If you'd like to see an example of bval and bvec files, download <a href="abcd/abcd_example.zip" download="example">here</a>. The data from the explosive sync study has 104 volumes, so our bval and bvec files have been edited to match.
+                        </p>
+
+                        <p>Now let's look at the first script below. This script will copy over the bvec and bval files that we've edited to the main 'DTI' directory and then create fieldmaps using a bash script (more on that later). You will need to edit lines 14 and 15 for your specific needs. The dtiProc directory should point to the new directory you created in the Data Organization section. The rawDir should point to the directory that contains all of your subjects' raw data. Line 16 can be left alone if you're working in the CPFRC environment, otherwise you want to change it to the name of the directory where each subject's diffusion lives. For example, any given subject in the rawDir may have several sub-directories including functional, anatomical and diffusion data. If the name of the diffusion data sub-directory is the same for each subject, change the value in line 16 accordingly.
+                        </p>
+
+                        <p>Now we will go function by function and discuss what is happening. The verifyModules function will check that the necessary software/modules for this script are loaded in the environment. In this case, it's just fsl. The bcolors class below it contains color variables that can be accessed as part of the verifyModules function. The getSubList function will create a list of subjects based on the rawDir variable. A subject will only be added to the list if they have a 'dti.nii' file in their 'DTI' directory. changeBVFiles will copy the edited bval and bvec files mentioned above to each subject's 'DTI' directory. You will need to edit lines 73 and 74 to point to the path where your bval and bvec files are stored. The createFieldmaps function is the core of the script. First, it will check if a fieldmap has already been created for the subject. If so, it will skip the processing step. If the subject doesn't have a fieldmap, the fslFMAP.sh script (found below) gets copied from the dtiProc/scripts directory to the individual subject directory. Once copied, it will be executed. After createFieldmaps processes each subject, the checkOutput function will go through each subject and check if the fieldmap was successfully created. You will receive a list of all (if any) subjects that did not run correctly.
                         </p>
 
                         <h4>Create Field Map Script</h4>
 
                                 <pre class="brush: python">
-
-                            ##### This script has functions that will:
+                        ##### This script has functions that will:
 # 1) generate a list of all the subjects that have been processed on new scanner software
 # 2) copy over abcd bvec and bval files 
 # 3) create fieldmaps using external fsl script
@@ -243,9 +248,8 @@ import time
 
 
 dtiProc = "/PROJECTS/REHARRIS/explosives/dtiProc"
-subDir = "/PROJECTS/REHARRIS/explosives/raw/"
-dicomPath = "/DTI"
-
+rawDir = "/PROJECTS/REHARRIS/explosives/raw/"
+niiPath = "/DTI"
 
 # verify that all the necessary modules have been loaded
 
@@ -274,11 +278,10 @@ class bcolors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
-
 # get a list of all the subjects that have been processed with the new software
 
-def getSubList(subDir):
-    os.chdir(subDir)
+def getSubList(rawDir):
+    os.chdir(rawDir)
     subList = []
     for sub in os.listdir():
         os.chdir(sub)
@@ -286,96 +289,115 @@ def getSubList(subDir):
             os.chdir("DTI")
             if os.path.isfile("dti.nii"):
                 subList.append(sub)
-        os.chdir(subDir)
+        os.chdir(rawDir)
     return subList
 
 
 ## copies the abcd bvec and bval files
 
-def changeBVFiles(subDir, subList):
-    os.chdir(subDir)
+def changeBVFiles(rawDir, subList):
+    os.chdir(rawDir)
     for sub in subList:
-        os.chdir(sub + "/DTI")
+        os.chdir(sub + niiPath)
         if os.path.isfile("abcd_edit.bval") and os.path.isfile("abcd_edit.bvec"):
             print("abcd bval and bvec files have already been copied over for subject " + sub)
             time.sleep(.1)
-            os.chdir(subDir)
+            os.chdir(rawDir)
             continue
         else:
             print("copying abcd bval and bvec files for subject " + sub)
             shutil.copy("/home/dasay/diffusion/abcd_edit.bval", os.getcwd())
             shutil.copy("/home/dasay/diffusion/abcd_edit.bvec", os.getcwd())
-        os.chdir(subDir)
+        os.chdir(rawDir)
 
 # creates fieldmaps for each subject
 
 
-def createFieldmaps(subDir, subList):
-    os.chdir(subDir)
+def createFieldmaps(rawDir, subList):
+    os.chdir(rawDir)
     for sub in subList:
-        os.chdir(sub + "/DTI")
+        os.chdir(sub + niiPath)
         if os.path.isfile("final_fieldmap.nii.gz"):
             print("fieldmap already exists for subject " + sub + "\nmoving to next subject...")
             time.sleep(.1)
-            os.chdir(subDir)
+            os.chdir(rawDir)
         else:
             print("creating fieldmap for subject " + sub + " ...")
             shutil.copy("/PROJECTS/REHARRIS/explosives/dtiProc/scripts/fslFMAP.sh", os.getcwd())
             os.system("bash fslFMAP.sh")
-            os.chdir(subDir)
+            os.chdir(rawDir)
 
 
 
-def checkOutput(subDir, subList):
-    os.chdir(subDir)
+def checkOutput(rawDir, subList):
+    os.chdir(rawDir)
     badSubs = []
     for sub in subList:
-        os.chdir(sub + "/DTI")
+        os.chdir(sub + niiPath)
         if os.path.isfile("final_fieldmap.nii.gz"):
             print("Fieldmap successfully created for subject " + sub)
             time.sleep(.1)
-            os.chdir(subDir)
+            os.chdir(rawDir)
         else:
             badSubs.append(sub)
-            os.chdir(subDir)
+            os.chdir(rawDir)
     print("No fieldmaps were created for the following subjects:\n" + str(badSubs) + "\nIf there are no subjects listed, then you're good!")
 
+verifyModules()
 
-subjects = getSubList(subDir)
+subjects = getSubList(rawDir)
 
-changeBVFiles(subDir, subjects)
+changeBVFiles(rawDir, subjects)
 
-createFieldmaps(subDir, subjects)
+createFieldmaps(rawDir, subjects)
 
-checkOutput(subDir, subjects)
+checkOutput(rawDir, subjects)
+
                                 </pre>
 
-                        <p>Lorem the It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English.</p>
 
-                        <a href="#" class="btn btn-primary">Get a Installation Service</a> <a href="#" class="btn btn-info">Ask a Question</a>
+                        <p>The bash script below, named fslFMAP.sh is being called by the python script above and will need to be saved somewhere on your machine before running the python script. Remember to edit the python script above on line 90 with the location of the script. You can probably tell that the python script largely serves as a wrapper for this bash script. Let's walk through the script and see what it's doing.
+                        </p>
 
-                        <hr>
+                        <p>First, we use <i>fslsplit</i> to create a .nii file for each of the volumes in the dti.nii data. Next, we use <i>fslmerge</i> to combine the reverse polarity .nii file and the first volume from the dti data. Make sure the fm_rev_pol.nii file is in each subject's 'DTI' directory; the script will fail without it. The fslsplit commmand generates a lot of unnecessary files, so we can clean that up using <i>rm dti_split*</i>. The following <i>fslroi</i> and <i>fslmerge</i> commands are padding the data for the topup command. For whatever reason, topup does not work with there are an odd number of slices, so we add one in here. With the data padded we're ready to run <i>topup</i>. When topup is done we will remove the padded slice with <i>fslsplit</i> and rename the output file to final_fieldmap.nii.gz.
+                        </p>
 
-                        <h4>Upload via FTP Server</h4>
+                        <h4>fslFMAP Script</h4>
 
-                        <p>Lorem the It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English.</p>
+                        <pre class="brush: bash">
+#!/bin/bash
 
-                        <a href="#" class="btn btn-primary">Get a Installation Service</a> <a href="#" class="btn btn-info">Ask a Question</a>
-                        <hr>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="media">
-                                    <iframe width="560" height="315" src="https://www.youtube.com/embed/yQnQyI5WlKs" frameborder="0" allowfullscreen></iframe>
-                                </div>
 
-                            </div>
-                            <div class="col-md-6">
-                                <div class="media">
-                                    <iframe width="560" height="315" src="https://www.youtube.com/embed/z0kEVwJB_go" frameborder="0" allowfullscreen></iframe>
-                                </div>
+# split the data into its respective volumes
+echo 'Splitting Volumes...'
+fslsplit dti.nii dti_split -t
 
-                            </div>
-                        </div>
+# merge the rev pol data with slice 0
+echo 'merging volumes...'
+fslmerge -t FM_vols.nii fm_rev_pol.nii dti_split0000.nii
+
+# clean up directory
+rm dti_split*
+
+# extract one slice
+echo 'extracting slice...'
+fslroi FM_vols.nii FM_oneslice.nii 0 -1 0 -1 0 1 0 -1 
+
+# merge it to the data
+echo 'merging into padded data...'
+fslmerge -z FM_padded FM_oneslice FM_vols.nii
+
+# run topup on FM_padded
+echo 'running topup...'
+topup --imain=FM_padded.nii --datain=datain.txt --config=b02b0.cnf --out=my_topup_results --iout=fieldmap_b0 --fout=calculated_fm
+
+# get rid of last volume in fieldmap
+echo 'removing last volume'
+fslsplit fieldmap_b0.nii final_fieldmap -t
+mv final_fieldmap0000.nii.gz final_fieldmap.nii.gz 
+rm final_fieldmap0001.nii.gz
+
+                        </pre>
 
                     </section>
                     <!-- end section -->
@@ -384,7 +406,7 @@ checkOutput(subDir, subjects)
 
                         <div class="row">
                             <div class="col-md-12 left-align">
-                                <h2 class="dark-text">Convering the Data<hr></h2>
+                                <h2 class="dark-text">Converting the Data<hr></h2>
                             </div>
                             <!-- end col -->
                         </div>
