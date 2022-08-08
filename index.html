@@ -111,12 +111,16 @@
                     <nav class="docs-sidebar" data-spy="affix" data-offset-top="300" data-offset-bottom="200" role="navigation">
                         <ul class="nav">
                             <li><a href="#line1">Mrtrix and Data Organization</a></li>
-                            <li><a href="#line2">Creating Fieldmaps</a></li>
-                            <li><a href="#line3">Converting the Data</a></li>
+                            <li><a href="#line2">Creating Fieldmaps</a>
+                                <ul class="nav">
+                                    <li><a href="#line2_1">Create Fieldmap Script</a></li>
+                                    <li><a href="#line2_2">fslFMAP Script</a></li>
+                                </ul>
+                            </li>
+                            <li><a href="#line3">Copy and Convert the Data</a></li>
                             <li><a href="#line4">DWI Denoise</a></li>
                             <li><a href="#line5">Working on Armis</a></li>
                             <li><a href="#line6">dwifslpreproc</a>
-                            <!--
                                 <ul class="nav">
                                     <li><a href="#line7_1">General Options</a></li>
                                     <li><a href="#line7_2">Style Options</a></li>
@@ -126,7 +130,6 @@
                                     <li><a href="#line7_6">Page Options</a></li>
                                     <li><a href="#line7_7">Import & Export</a></li>
                                 </ul>
-                            -->
                             </li>
                             <li><a href="#line7">Spherical Deconvolution</a></li>
                             <li><a href="#line8">Create Tissue Boundaries</a></li>
@@ -223,16 +226,23 @@
                         </div>
                         <!-- end row -->
 
+
                         <p>Because of a recent update to the scanner software from GE, the first thing we have to do is create fieldmaps for each of our subjects. To do so, we will be using various fsl commands. In addition to creating fieldmaps for each subject, we also have to copy over the appropriate bval and bvec files. The bval and bvec files found in the 'DTI' folder are incorrect, so we will be using bval and bvec files originally from the ABCD study that have been modified for our needs. As a general rule, the number of lines in your bval and bvec files should match the number of volumes in your diffusion data. If you'd like to see an example of bval and bvec files, download <a href="abcd/abcd_example.zip" download="example">here</a>. The data from the explosive sync study has 104 volumes, so our bval and bvec files have been edited to match.
                         </p>
 
-                        <p>Now let's look at the first script below. This script will copy over the bvec and bval files that we've edited to the main 'DTI' directory and then create fieldmaps using a bash script (more on that later). You will need to edit lines 14 and 15 for your specific needs. The dtiProc directory should point to the new directory you created in the Data Organization section. The rawDir should point to the directory that contains all of your subjects' raw data. Line 16 can be left alone if you're working in the CPFRC environment, otherwise you want to change it to the name of the directory where each subject's diffusion lives. For example, any given subject in the rawDir may have several sub-directories including functional, anatomical and diffusion data. If the name of the diffusion data sub-directory is the same for each subject, change the value in line 16 accordingly.
+                        <p>Let's look at the first script below. This script will copy over the bvec and bval files that we've edited to the main 'DTI' directory and then create fieldmaps using a bash script (more on that later). You will need to edit lines 14 and 15 for your specific needs. The dtiProc directory should point to the new directory you created in the Data Organization section. The rawDir should point to the directory that contains all of your subjects' raw data. Line 16 can be left alone if you're working in the CPFRC environment, otherwise you want to change it to the name of the directory where each subject's diffusion lives. For example, any given subject in the rawDir may have several sub-directories including functional, anatomical and diffusion data. If the name of the diffusion data sub-directory is the same for each subject, change the value in line 16 accordingly.
                         </p>
 
-                        <p>Now we will go function by function and discuss what is happening. The verifyModules function will check that the necessary software/modules for this script are loaded in the environment. In this case, it's just fsl. The bcolors class below it contains color variables that can be accessed as part of the verifyModules function. The getSubList function will create a list of subjects based on the rawDir variable. A subject will only be added to the list if they have a 'dti.nii' file in their 'DTI' directory. changeBVFiles will copy the edited bval and bvec files mentioned above to each subject's 'DTI' directory. You will need to edit lines 73 and 74 to point to the path where your bval and bvec files are stored. The createFieldmaps function is the core of the script. First, it will check if a fieldmap has already been created for the subject. If so, it will skip the processing step. If the subject doesn't have a fieldmap, the fslFMAP.sh script (found below) gets copied from the dtiProc/scripts directory to the individual subject directory. Once copied, it will be executed. After createFieldmaps processes each subject, the checkOutput function will go through each subject and check if the fieldmap was successfully created. You will receive a list of all (if any) subjects that did not run correctly.
+                        <div class="row">
+                            <div class="col-md-12">
+
+                        <p id="line2_1">Now we will go function by function and discuss what is happening. You can download the script <a href="scripts/createFieldMap.py.zip" download="createFieldmap">here</a> if interested. The verifyModules function will check that the necessary software/modules for this script are loaded in the environment. In this case, it's just fsl. The bcolors class below it contains color variables that can be accessed as part of the verifyModules function. The getSubList function will create a list of subjects based on the rawDir variable. A subject will only be added to the list if they have a 'dti.nii' file in their 'DTI' directory. changeBVFiles will copy the edited bval and bvec files mentioned above to each subject's 'DTI' directory. You will need to edit lines 73 and 74 to point to the path where your bval and bvec files are stored. The createFieldmaps function is the core of the script. First, it will check if a fieldmap has already been created for the subject. If so, it will skip the processing step. If the subject doesn't have a fieldmap, the fslFMAP.sh script (found below) gets copied from the dtiProc/scripts directory to the individual subject directory. Once copied, it will be executed. After createFieldmaps processes each subject, the checkOutput function will go through each subject and check if the fieldmap was successfully created. You will receive a list of all (if any) subjects that did not run correctly.
                         </p>
 
-                        <h4>Create Field Map Script</h4>
+
+                                <h4>Create Field Map Script</h4>
+                            </div>
+                        </div>
 
                                 <pre class="brush: python">
                         ##### This script has functions that will:
@@ -356,11 +366,17 @@ checkOutput(rawDir, subjects)
                                 </pre>
 
 
-                        <p>The bash script below, named fslFMAP.sh is being called by the python script above and will need to be saved somewhere on your machine before running the python script. Remember to edit the python script above on line 90 with the location of the script. You can probably tell that the python script largely serves as a wrapper for this bash script. Let's walk through the script and see what it's doing.
+                        <div class="row">
+                            <div class="col-md-12">
+
+                        <p id ="line2_2">The <a href = "scripts/fslFMAP.sh.zip" download="fslFMAP">bash script</a> below, named fslFMAP.sh, is being called by the python script above and will need to be saved somewhere on your machine before running the python script. Remember to edit the python script above on line 90 with the location of the script. You can probably tell that the python script largely serves as a wrapper for this bash script. Let's walk through the script and see what it's doing.
                         </p>
 
-                        <p>First, we use <i>fslsplit</i> to create a .nii file for each of the volumes in the dti.nii data. Next, we use <i>fslmerge</i> to combine the reverse polarity .nii file and the first volume from the dti data. Make sure the fm_rev_pol.nii file is in each subject's 'DTI' directory; the script will fail without it. The fslsplit commmand generates a lot of unnecessary files, so we can clean that up using <i>rm dti_split*</i>. The following <i>fslroi</i> and <i>fslmerge</i> commands are padding the data for the topup command. For whatever reason, topup does not work with there are an odd number of slices, so we add one in here. With the data padded we're ready to run <i>topup</i>. When topup is done we will remove the padded slice with <i>fslsplit</i> and rename the output file to final_fieldmap.nii.gz.
+                        <p>First, we use <i>fslsplit</i> to create a .nii file for each of the volumes in the dti.nii data. Next, we use <i>fslmerge</i> to combine the reverse polarity .nii file and the first volume from the dti data. Make sure the fm_rev_pol.nii file is in each subject's 'DTI' directory; the script will fail without it. The fslsplit commmand generates a lot of unnecessary files, so we can clean that up using <i>rm dti_split*</i>. The following <i>fslroi</i> and <i>fslmerge</i> commands are padding the data for the topup command. For whatever reason, topup does not work with there are an odd number of slices, so we add one in here. With the data padded we're ready to run <i>topup</i>. When topup is done we will remove the padded slice with <i>fslsplit</i> and rename the output file to final_fieldmap.nii.gz. If all goes well, you should have a file named final_fieldmap.nii.gz for each of your subejcts.
                         </p>
+
+                              </div>
+                        </div>
 
                         <h4>fslFMAP Script</h4>
 
@@ -402,52 +418,203 @@ rm final_fieldmap0001.nii.gz
                     </section>
                     <!-- end section -->
 
-                    <section id="line4" class="section">
+                    <section id="line3" class="section">
 
                         <div class="row">
                             <div class="col-md-12 left-align">
-                                <h2 class="dark-text">Converting the Data<hr></h2>
+                                <h2 class="dark-text">Copy and Convert the Data<hr></h2>
                             </div>
                             <!-- end col -->
                         </div>
                         <!-- end row -->
 
-                        <div class="row">
-                            <div class="col-md-4">
-                                <img src="images/upload/plugin1.png" alt="" class="img-responsive img-thumbnail">
-                                <h4>Plugin name #1</h4>
-                                <p>Lorem the It is a long established fact that a reader will be distracted.. Please read more about WordPress here.</p>
-                            </div>
-                            <!-- end col -->
+                        <p>With our fieldmaps created we are ready to move forward with data processing. First, we will copy the data from the rawDir to the each subject's directory under dtiProc. MRtrix uses a special file extension called .mif, so we will have to convert our nii data to mif format after it has been copied. Download the script <a href="scripts/preproc01.py.zip" download="copyConvert">here</a>. The downloadable script contains code for both this section and the DWI Denoise section.
+                        </p>
 
-                            <div class="col-md-4">
-                                <img src="images/upload/plugin2.png" alt="" class="img-responsive img-thumbnail">
-                                <h4>Plugin name #2</h4>
-                                <p>Lorem the It is a long established fact that a reader will be distracted.. Please read more about WordPress here.</p>
-                            </div>
-                            <!-- end col -->
+                        <p>The script starts off with the verifyModules function which ensures that both Mrtrix and AFNI have both been loaded into the environment. The getSubList function will create a list of subjects from the rawSubDir. A subject gets added to the list if they have both dti data and have had a fieldmap created for them. Next, makeSubDirs will take the list created from getSubList and create a directory for each subject with dti, fieldmaps and anatomy sub-directories.
+                        </p>
+                        <p>After the directories are created, the copyData function will copy over data for the 3 modalities. copyData makes use of the checkIfDataCopied helper method to check if the data for each modality has already been copied over. Once the data finishes copying, the renameAndConvert and convert functions work in tandem to convert the dti and fieldmap data from nii to mif format. Notice that the <i>mrconvert</i> command on lines 133-136 add the bval and bvec files to the header of the output file with the -fslgrad option.
+                        </p>
 
-                            <div class="col-md-4">
-                                <img src="images/upload/plugin3.png" alt="" class="img-responsive img-thumbnail">
-                                <h4>Plugin name #3</h4>
-                                <p>Lorem the It is a long established fact that a reader will be distracted.. Please read more about WordPress here.</p>
-                            </div>
-                            <!-- end col -->
+                        <pre class="brush: python">
 
-                            <div class="col-md-12">
-                                <p>Lorem the It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English. long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English.</p>
+                        ### This scripts has functions that will: 
+# 1) copy nifti data from raw dir to dtiProc, including fieldmaps, dti and anatomy
+# 2) label dti and fieldmap data as PA and AP, respectively
+# 3) convert the data from nii to mif format and combine with its bvec and bval files
+# 4) compare the number of volumes in mif file and bvec/bval files, all 3 should be equal
 
-                                <div class="text-center">
-                                    <a href="#" class="btn btn-primary">Get a Installation Service</a> <a href="#" class="btn btn-info">Ask a Question</a>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- end row -->
+import shutil
+import os
+import subprocess
+import pandas as pd
+import nibabel as nib
+import numpy as np
+import time
+
+rawSubDir = "/PROJECTS/REHARRIS/explosives/raw/"
+subsDir = "/PROJECTS/REHARRIS/explosives/dtiProc/subs/"
+rawPath = "/DTI"
+
+
+def verifyModules():
+    print("Modules loaded:")
+    os.system("module list")
+    while True:
+            loaded = input(f"\n{bcolors.WARNING}For this script, you need the mrtrix module loaded.\nIs it listed above? If so, type yes and hit enter. \nIf not, please type no and hit enter.\n{bcolors.ENDC}")
+            if loaded == "yes" or loaded == "y" or loaded == "Yes" or loaded == "YES":
+                print("great! running script...")
+                break
+            elif loaded == "no" or loaded == "n" or loaded == "No" or loaded == "NO":
+                print("\nplease load fsl using the following command:\n")
+                print("module load mrtrix\n")
+                print("after loading the module, relaunch the script")
+                sys.exit()
+ 
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+
+# this function will create a list of subjects to process if their data was collected using the new scanner software AND createFieldMap.py has successfully run
+
+def getSubList(rawSubDir):
+    os.chdir(rawSubDir)
+    subList = []
+    for sub in os.listdir():
+        os.chdir(sub)
+        if os.path.isdir("DTI"):
+            os.chdir("DTI")
+            if os.path.isfile("dti.nii") and os.path.isfile("final_fieldmap.nii.gz"):
+                subList.append(sub)
+        os.chdir(rawSubDir)
+    return subList
+
+
+# this function will create a subject directory and dti, fieldmaps and anatomy sub-directories in the dtiProc/subs dir
+
+def makeSubDirs(subDir, rawSubDir):
+    for sub in getSubList(rawSubDir):
+        os.chdir(subDir)
+        if os.path.isdir(sub):
+            continue
+        else:
+            os.makedirs(sub)
+            os.chdir(sub)
+            os.makedirs("dti")
+            os.makedirs("fieldmaps")
+            os.makedirs("anatomy")
+
+# if subject data has not already been copied, this function will copy it over from raw to dtiProc
+
+def copyData(subDir, rawSubDir, rawPath):
+    print("Copying over raw data...")
+    for sub in getSubList(rawSubDir):
+        dataPath = rawSubDir + sub + rawPath
+        newDtiPath = subDir + sub + "/dti"
+        dataCopied = checkIfDataCopied(newDtiPath, sub, "dti")
+        if dataCopied is False:
+            dtiCopyList = ["/abcd_edit.bval", "/abcd_edit.bvec", "/dti.nii"]
+            for file in dtiCopyList:
+                source = dataPath + file
+                destination = newDtiPath
+                print("Copying " + file + " for subject " + sub)
+                shutil.copy(source, destination)
+        fieldmaps = rawSubDir + sub + rawPath
+        newFieldmapPath = subDir + sub + "/fieldmaps"
+        dataCopied = checkIfDataCopied(newFieldmapPath, sub, "fieldmap")
+        if dataCopied is False:
+            fmapCopyList = ["/final_fieldmap.nii.gz"]
+            for file in fmapCopyList:
+                source = fieldmaps + file
+                destination = newFieldmapPath
+                print("Copying " + file + " for subject " + sub)
+                shutil.copy(source, destination)
+        anatomical = rawSubDir + sub + "/anatomy/t1spgr_208sl"
+        newAnatomyPath = subDir + sub + "/anatomy"
+        dataCopied = checkIfDataCopied(newAnatomyPath, sub, "anatomical")
+        if dataCopied is False:
+            anatCopyList = ["/t1spgr_208sl.nii"]
+            for file in anatCopyList:
+                source = anatomical + file 
+                destination = newAnatomyPath
+                print("Copying " + file + " for subject " + sub)
+                shutil.copy(source, destination)
+
+# this function will check if the raw data for a given subject has already been copied from raw to dtiProc
+
+def checkIfDataCopied(dataPath, sub, modality):
+    os.chdir(dataPath)
+    dirContents = os.listdir()
+    if dirContents:
+        print(str(modality) + " data already copied for subject: " + sub)
+        return True
+    else:
+        return False
+
+
+# function will convert dti and fieldmap data from .nii to .mif format.
+
+def convert(fieldmap, sub):
+    if fieldmap is False:
+        if os.path.isfile("already_converted.txt"):
+            print("Dti files have already been combined and converted to .mif format for subject " + sub)
+            return
+        print("Converting dti files for subject: " + sub)
+        convertToMif = f"""
+            mrconvert \
+            dti.nii \
+            run-01_dwi.mif \
+            -fslgrad abcd_edit.bvec abcd_edit.bval
+        """
+        proc1 = subprocess.Popen(convertToMif, shell=True, stdout=subprocess.PIPE)
+        proc1.wait()
+        subprocess.run(['touch', 'already_converted.txt'])
+    else:
+        if os.path.isfile("already_converted.txt"):
+            print("Fmap files have already been combined and converted to .mif format for subject " + sub)
+            return
+        print("Converting fmap files for subject: " + sub)
+        convertToMif = f"""
+            mrconvert \
+            new_fieldmap.nii \
+            fieldmap.mif 
+        """
+        proc2 = subprocess.Popen(convertToMif, shell=True, stdout=subprocess.PIPE)
+        proc2.wait()
+        subprocess.run(['touch', 'already_converted.txt'])
+
+
+# go into each subject directory and call convert() function
+
+def renameAndConvert(subDir):
+    print("Converting files from nii to mif format...")
+    for sub in getSubList(rawSubDir):
+        # Go into dti directory for the sub and convert data to .mif
+        os.chdir(subDir)
+        dtiData = sub + "/dti"
+        os.chdir(dtiData)
+        convert(False, sub) # False indicates not fieldmap data
+        os.chdir(subDir)
+        fmapData = sub + "/fieldmaps"
+        os.chdir(fmapData)
+        convert(True, sub) # True indicates fieldmap data
+
+
+                        </pre>
+
 
                     </section>
                     <!-- end section -->
 
-                    <section id="line5" class="section">
+                    <section id="line4" class="section">
 
                         <div class="row">
                             <div class="col-md-12 left-align">
@@ -504,7 +671,7 @@ rm final_fieldmap0001.nii.gz
                     </section>
                     <!-- end section -->
 
-                    <section id="line6" class="section">
+                    <section id="line5" class="section">
 
                         <div class="row">
                             <div class="col-md-12 left-align">
@@ -549,7 +716,7 @@ rm final_fieldmap0001.nii.gz
                     </section>
                     <!-- end section -->
 
-                    <section id="line7" class="section">
+                    <section id="line6" class="section">
 
                         <div class="row">
                             <div class="col-md-12 left-align">
@@ -665,7 +832,7 @@ rm final_fieldmap0001.nii.gz
                     </section>
                     <!-- end section -->
 
-                    <section id="line8" class="section">
+                    <section id="line7" class="section">
 
                         <div class="row">
                             <div class="col-md-12 left-align">
@@ -713,7 +880,7 @@ rm final_fieldmap0001.nii.gz
                     </section>
                     <!-- end section -->
 
-                    <section id="line9" class="section">
+                    <section id="line8" class="section">
 
                         <div class="row">
                             <div class="col-md-12 left-align">
@@ -773,7 +940,7 @@ rm final_fieldmap0001.nii.gz
                     </section>
                     <!-- end section -->
 
-                    <section id="line10" class="section">
+                    <section id="line9" class="section">
 
                         <div class="row">
                             <div class="col-md-12 left-align">
@@ -848,7 +1015,7 @@ rm final_fieldmap0001.nii.gz
                     </section>
                     <!-- end section -->
 
-                    <section id="line11" class="section">
+                    <section id="line10" class="section">
 
                         <div class="row">
                             <div class="col-md-12 left-align">
