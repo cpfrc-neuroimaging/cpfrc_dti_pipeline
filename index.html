@@ -653,7 +653,7 @@ runAll(subDir, rawSubDir, rawPath)
                                 </p>
                                 <p>You will notice that the script below has the same preamble as the script in the Copy and Convert the Data section. You can combine these scripts into one or keep them separate. They've been split up here for readability. verifyModules and getSubList run first to make sure we've got our necessary software loaded and all the correct subjects queued for processing. Our dwiDenoise function will run the MRtrix <i>dwidenoise</i> on each subject while also utilizing the checkNoiseFile function to check if dwiDenoise has already been run on the subject. If it has, that subject will be skipped to avoid redundant processing. 
                                 </p>
-                                <p>Next, we get to the createB0 function. This function does several things for us. First, it will go into each subject directory in dtiProc and create a directory called 'combined'. The combined directory will serve as the host directory for several different data files that come from both the dti and fieldmap directories. The overall purpose of the createB0 function is to extract the b-values from both the reverse and primary phase encoded images and combine them into one file. You'll notice that I have the b-values extraction step commented out for the fieldmap (reverse phase encoded) data. In our case, since the fieldmap is just one volume, it is not necessary (or feasible) to do so. However, I've left the commands there as a reference for those who may be in a different situation. We extract the b-values using MRtrix's <i>dwiextract</i> and then comnbine the two files into a B0 image using MRtrix's <i>mrcat</i>. Our final output file should be <strong>b0_pair.mif</strong>.
+                                <p>Next, we get to the createB0 function. This function does several things for us. First, it will go into each subject directory in dtiProc and create a directory called 'combined'. The combined directory will serve as the host directory for several different data files that come from both the dti and fieldmap directories. The overall purpose of the createB0 function is to extract the b-values from both the reverse and primary phase encoded images and combine them into one file. You'll notice that I have the b-values extraction step commented out for the fieldmap (reverse phase encoded) data. In our case, since the fieldmap is just one volume, it is not necessary (or feasible) to do so. However, I've left the commands there as a reference for those who may be in a different situation. We extract the b-values using MRtrix's <i>dwiextract</i> and then comnbine the two files into a B0 image using MRtrix's <i>mrcat</i>. Our final output file should be <strong>b0_pair.mif</strong>. The fixZDir function serves a similar purpose to <i>fslmerge</i> a couple of sections ago. We will be running topup later on as a part of a preprocessing step, so we need to make sure the dimensions in the z direction are even. Here, we accomplish that by running <i>mrgrid</i> on our denoised data. Our output file will have the same name, run-01_den.mif, but you should see our z direction data go up by one when you run <i>mrinfo</i>.
                                 </p>
                                 <p>The final function for this section is fixDataStrides. This function may not be strictly necessary to run, but I've found it useful in the past. There may be instances where, somewhere during processing, the data strides information in the header of your diffusion data gets incorrectly edited. This function should fix that problem. I also use it as a chance to copy my bval and bvec files into the 'combined' directory. The fixDataStrides function simply uses MRtrix's <i>mrconvert</i> command to convert the data from mif to nii, and then back to mif with the fslgrad option. You should lonly have to do this if the data strides in your data read as anything besides: [-1 2 3 4]. You can get this info by running <i>mrinfo</i> on your run-01_den.mif data. The runAll function will run all of the aforementioned functions.
                                 </p>
@@ -769,6 +769,23 @@ def createB0(subDir):
         meanB0 = "mrcat fieldmap.mif meanPrimary.mif -axis 3 b0_pair.mif"
         proc3 = subprocess.Popen(meanB0, shell=True, stdout=subprocess.PIPE)
         proc3.wait()
+
+#this function pads the data in the z direction so that there's not an uneven number for topup later on 
+# during dwifslpreproc
+
+def fixZDir(subDir):
+    for sub in getSubList(rawSubDir):
+        currentSub = subDir + sub + "/combined"
+        os.chdir(currentSub)
+        print("running mrgrid on subject " + sub)
+        mrgrid = "mrgrid run-01_den.mif pad -axis 2 0,1 out.mif"
+        proc1 = subprocess.Popen(mrgrid, shell=True, stdout=subprocess.PIPE)
+        proc1.wait()
+        os.remove("run-01_den.mif")
+        rename = "mrconvert out.mif run-01_den.mif"
+        proc2 = subprocess.Popen(rename, shell=True, stdout=subprocess.PIPE)
+        proc2.wait()
+        os.remove("out.mif")
 
 def fixDataStrides(subDir):
     """
