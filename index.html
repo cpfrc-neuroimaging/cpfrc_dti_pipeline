@@ -372,7 +372,7 @@ checkOutput(rawDir, subjects)
                         <p id ="line2_2">The <a href = "scripts/fslFMAP.sh.zip" download="fslFMAP">bash script</a> below, named fslFMAP.sh, is being called by the python script above and will need to be saved somewhere on your machine before running the python script. Remember to edit the python script above on line 90 with the location of the script. You can probably tell that the python script largely serves as a wrapper for this bash script. Let's walk through the script and see what it's doing.
                         </p>
 
-                        <p>First, we use <i>fslsplit</i> to create a .nii file for each of the volumes in the dti.nii data. Next, we use <i>fslmerge</i> to combine the reverse polarity .nii file and the first volume from the dti data. Make sure the fm_rev_pol.nii file is in each subject's 'DTI' directory; the script will fail without it. The fslsplit commmand generates a lot of unnecessary files, so we can clean that up using <i>rm dti_split*</i>. The following <i>fslroi</i> and <i>fslmerge</i> commands are padding the data for the topup command. For whatever reason, topup does not work with there are an odd number of slices, so we add one in here. With the data padded we're ready to run <i>topup</i>. When topup is done we will remove the padded slice with <i>fslsplit</i> and rename the output file to final_fieldmap.nii.gz. If all goes well, you should have a file named final_fieldmap.nii.gz for each of your subejcts.
+                        <p>First, we use <i>fslsplit</i> to create a .nii file for each of the volumes in the dti.nii data. Next, we use <i>fslmerge</i> to combine the reverse polarity .nii file and the first volume from the dti data. Make sure the fm_rev_pol.nii file is in each subject's 'DTI' directory; the script will fail without it. The fslsplit commmand generates a lot of unnecessary files, so we can clean that up using <i>rm dti_split*</i>. The following <i>fslroi</i> and <i>fslmerge</i> commands are padding the data for the topup command. For whatever reason, topup does not work with there are an odd number of slices, so we add one in here. With the data padded we're ready to run <i>topup</i>. When topup is done we will remove the padded slice with <i>fslsplit</i> and rename the output file to final_fieldmap.nii.gz. If all goes well, you should have a file named <strong>final_fieldmap.nii.gz</strong> for each of your subejcts.
                         </p>
 
                               </div>
@@ -433,7 +433,7 @@ rm final_fieldmap0001.nii.gz
 
                         <p>The script starts off with the verifyModules function which ensures that both Mrtrix and AFNI have both been loaded into the environment. The getSubList function will create a list of subjects from the rawSubDir. A subject gets added to the list if they have both dti data and have had a fieldmap created for them. Next, makeSubDirs will take the list created from getSubList and create a directory for each subject with dti, fieldmaps and anatomy sub-directories.
                         </p>
-                        <p>After the directories are created, the copyData function will copy over data for the 3 modalities. copyData makes use of the checkIfDataCopied helper method to check if the data for each modality has already been copied over. Once the data finishes copying, the renameAndConvert and convert functions work in tandem to convert the dti and fieldmap data from nii to mif format. Notice that the <i>mrconvert</i> command on lines 133-136 add the bval and bvec files to the header of the output file with the -fslgrad option.
+                        <p>After the directories are created, the copyData function will copy over data for the 3 modalities. copyData makes use of the checkIfDataCopied helper method to check if the data for each modality has already been copied over. This is where the resample function comes in. This function will ensure that the fieldmap and dti data have the same dimensions. If they don't, it will cause problems in later processing steps. The output of this function will be 'new_fieldmap.nii'. Once the data finishes copying and has been resampled, the renameAndConvert and convert functions work in tandem to convert the dti and fieldmap data from nii to mif format. Notice that the <i>mrconvert</i> command on lines 133-136 add the bval and bvec files to the header of the output file with the -fslgrad option. Your final outputs should be <strong>run-01_dwi.mif</strong> and <strong>fieldmap.mif</strong>.
                         </p>
 
                         <pre class="brush: python">
@@ -559,6 +559,19 @@ def checkIfDataCopied(dataPath, sub, modality):
     else:
         return False
 
+def resample(rawSubDir, subDir):
+    for sub in getSubList(rawSubDir):
+        print("Resampling the data for subject " + sub)
+        dtiNiiPath = subDir + sub + "/dti/dti.nii"
+        fieldmapPath = subDir + sub + "/fieldmaps"
+        os.chdir(fieldmapPath)
+        shutil.copy(dtiNiiPath, os.getcwd())
+        resampleCommand = "3dresample -master dti.nii -prefix new_fieldmap.nii -input final_fieldmap.nii.gz"
+        proc = subprocess.Popen(resampleCommand, shell=True, stdout=subprocess.PIPE)
+        proc.wait()
+        os.remove("dti.nii")
+        time.sleep(.1)
+
 
 # function will convert dti and fieldmap data from .nii to .mif format.
 
@@ -607,6 +620,15 @@ def renameAndConvert(subDir):
         os.chdir(fmapData)
         convert(True, sub) # True indicates fieldmap data
 
+def runAll(subDir, rawSubDir, rawPath):
+    verifyModules()
+    makeSubDirs(subDir, rawSubDir)
+    copyData(subDir, rawSubDir, rawPath)
+    resample(rawSubDir, subDir)
+    renameAndConvert(subDir)
+
+runAll(subDir, rawSubDir, rawPath)
+
 
                         </pre>
 
@@ -627,43 +649,157 @@ def renameAndConvert(subDir):
                         <div class="row">
 
                             <div class="col-md-12">
-                                <p>Lorem the It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English. long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English.</p>
+                                <p>With the data converted to mif format, we're ready to run the first pre-processing step: <i>dwidenoise</i>. The dwidenoise command creates a noise map estimation by running a principle components analysis (PCA). Read <a href="https://mrtrix.readthedocs.io/en/latest/reference/commands/dwidenoise.html" target="_blank">here</a> for a more in-depth explanation. 
+                                </p>
+                                <p>You will notice that the script below has the same preamble as the script in the Copy and Convert the Data section. You can combine these scripts into one or keep them separate. They've been split up here for readability. verifyModules and getSubList run first to make sure we've got our necessary software loaded and all the correct subjects queued for processing. Our dwiDenoise function will run the MRtrix <i>dwidenoise</i> on each subject while also utilizing the checkNoiseFile function to check if dwiDenoise has already been run on the subject. If it has, that subject will be skipped to avoid redundant processing. 
+                                </p>
+                                <p>Next, we get to the createB0 function. This function does several things for us. First, it will go into each subject directory in dtiProc and create a directory called 'combined'. The combined directory will serve as the host directory for several different data files that come from both the dti and fieldmap directories. The overall purpose of the createB0 function is to extract the b-values from both the reverse and primary phase encoded images and combine them into one file. You'll notice that I have the b-values extraction step commented out for the fieldmap (reverse phase encoded) data. In our case, since the fieldmap is just one volume, it is not necessary (or feasible) to do so. However, I've left the commands there as a reference for those who may be in a different situation. We extract the b-values using MRtrix's <i>dwiextract</i> and then comnbine the two files into a B0 image using MRtrix's <i>mrcat</i>. Our final output file should be <strong>b0_pair.mif</strong>.
+                                </p>
+                                <p>The final function for this section is fixDataStrides. This function may not be strictly necessary to run, but I've found it useful in the past. There may be instances where, somewhere during processing, the data strides information in the header of your diffusion data gets incorrectly edited. This function should fix that problem. I also use it as a chance to copy my bval and bvec files into the 'combined' directory. The fixDataStrides function simply uses MRtrix's <i>mrconvert</i> command to convert the data from mif to nii, and then back to mif with the fslgrad option. You should lonly have to do this if the data strides in your data read as anything besides: [-1 2 3 4]. You can get this info by running <i>mrinfo</i> on your run-01_den.mif data. The runAll function will run all of the aforementioned functions.
+                                </p>
                             </div>
 
-                            <div class="col-md-4">
-                                <a href="upload/thumbnail.png" data-rel="prettyPhoto"><img src="images/upload/thumbnail.png" alt="" class="img-responsive img-thumbnail"></a>
-                                <h4 id="line5_1">WordPress Blog Page -</h4>
-                                <ul>
-                                    <li><strong>Step 1</strong> - Lorem the It is a long established fact that a reader ease read more about WordPress here.</li>
-                                    <li><strong>Step 2</strong> - Lorem the It is a long established fact that a reader will be distracted.. Please read more about WordPress here.</li>
-                                    <li><strong>Step 3</strong> - Lorem the It is a long established fact that a read.</li>
-                                </ul>
-                            </div>
-                            <!-- end col -->
 
-                            <div class="col-md-4">
-                                <a href="upload/thumbnail.png" data-rel="prettyPhoto"><img src="images/upload/thumbnail.png" alt="" class="img-responsive img-thumbnail"></a>
-                                <h4 id="line5_2">Blog Post Sections -</h4>
-                                <p>Lorem the It is a long established fact that a reader will be distracted.. Please read more about WordPress here.</p>
-                                <ul>
-                                    <li><strong>Step 1</strong> - Lorem the It is a long established fact that a reader ease read more about WordPress here.</li>
-                                    <li><strong>Step 2</strong> - Lorem the It is a long established fact that a reader will be distracted.. Please read more about WordPress here.</li>
-                                    <li><strong>Step 3</strong> - Lorem the It is a long established fact that a read.</li>
-                                </ul>
-                            </div>
-                            <!-- end col -->
+                        <pre class="brush: python">
 
-                            <div class="col-md-4">
-                                <a href="upload/thumbnail.png" data-rel="prettyPhoto"><img src="images/upload/thumbnail.png" alt="" class="img-responsive img-thumbnail"></a>
-                                <h4 id="line5_3">Create Blog Gallery -</h4>
-                                <p>Lorem the It is a long established fact that a reader will be distracted.. Please read more about WordPress here.</p>
-                                <ul>
-                                    <li><strong>Step 1</strong> - Lorem the It is a long established fact that a reader ease read more about WordPress here.</li>
-                                    <li><strong>Step 2</strong> - Lorem the It is a long established fact that a reader will be distracted.. Please read more about WordPress here.</li>
-                                    <li><strong>Step 3</strong> - Lorem the It is a long established fact that a read.</li>
-                                </ul>
-                            </div>
-                            <!-- end col -->
+import sys
+import os
+import shutil
+import time
+
+
+dtiProc = "/PROJECTS/REHARRIS/explosives/dtiProc"
+rawDir = "/PROJECTS/REHARRIS/explosives/raw/"
+niiPath = "/DTI"
+
+# verify that all the necessary modules have been loaded
+
+def verifyModules():
+    print("Modules loaded:")
+    os.system("module list")
+    while True:
+            loaded = input(f"\n{bcolors.WARNING}For this script, you need the fsl module loaded.\nIs it listed above? If so, type yes and hit enter. \nIf not, please type no and hit enter.\n{bcolors.ENDC}")
+            if loaded == "yes" or loaded == "y" or loaded == "Yes" or loaded == "YES":
+                print("great! running script...")
+                break
+            elif loaded == "no" or loaded == "n" or loaded == "No" or loaded == "NO":
+                print("\nplease load fsl using the following command:\n")
+                print("module load fsl/6.0.3\n")
+                print("after loading the module, relaunch the script")
+                sys.exit()
+
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+# get a list of all the subjects that have been processed with the new software
+
+def getSubList(rawDir):
+    os.chdir(rawDir)
+    subList = []
+    for sub in os.listdir():
+        os.chdir(sub)
+        if os.path.isdir("DTI"):
+            os.chdir("DTI")
+            if os.path.isfile("dti.nii"):
+                subList.append(sub)
+        os.chdir(rawDir)
+    return subList
+
+
+# run mrtrix function dwidenoise
+
+def dwiDenoise(subDir):
+    print("Running dwi_denoise on subjects...")
+    for sub in getSubList(rawSubDir):
+        dtiSubjectDir = subDir + sub + "/dti"
+        os.chdir(dtiSubjectDir)
+        if not checkNoiseFile(sub):
+            print("Running on " + sub)
+            denoise = "dwidenoise run-01_dwi.mif run-01_den.mif -noise noise.mif"
+            proc = subprocess.Popen(denoise, shell=True, stdout=subprocess.PIPE)
+            proc.wait()
+        else:
+            continue
+
+
+def checkNoiseFile(sub):
+    if os.path.isfile("run-01_den.mif"):
+        print("dwi_denoise has already been run on subject: " + sub)
+        return True
+    else:
+        return False
+
+# this function will create a B0 image that combines the dti and fieldmap data 
+
+def createB0(subDir):
+    #Get b0 image
+    for sub in getSubList(rawSubDir):
+        currentSub = subDir + sub
+        os.chdir(currentSub)
+        if not os.path.isdir("combined"):
+            os.makedirs("combined")
+            combinedDir = os.getcwd() + "/combined"
+            os.chdir("fieldmaps")
+            shutil.copy("fieldmap.mif", combinedDir)
+        print("Creating B0 image for subject: " + sub)
+        # get mean for fmaps
+        #os.chdir("fieldmaps")
+        #fmapB0 = "mrconvert fieldmap.mif - | mrmath - mean meanReversed.mif -axis 3"
+        #proc1 = subprocess.Popen(fmapB0, shell=True, stdout=subprocess.PIPE)
+        #proc1.wait()
+        #shutil.copy("meanReversed.mif", combinedDir)
+        os.chdir(currentSub)
+        # get mean for dti
+        os.chdir("dti")
+        dtiB0 = "dwiextract run-01_den.mif - -bzero | mrmath - mean meanPrimary.mif -axis 3"
+        proc2 = subprocess.Popen(dtiB0, shell=True, stdout=subprocess.PIPE)
+        proc2.wait()
+        shutil.copy("meanPrimary.mif", combinedDir)
+        shutil.copy("run-01_den.mif", combinedDir)
+        # combine means into b0 image
+        os.chdir(combinedDir)
+        meanB0 = "mrcat fieldmap.mif meanPrimary.mif -axis 3 b0_pair.mif"
+        proc3 = subprocess.Popen(meanB0, shell=True, stdout=subprocess.PIPE)
+        proc3.wait()
+
+def fixDataStrides(subDir):
+    """
+    This is to be run when the data strides read as anything else besides [-1 2 3 4]
+    Use mrinfo to view data strides. This is a fix if dwifslpreproc does not run.
+    """
+    for sub in getSubList(rawSubDir):
+        currentSub = subDir + sub + "/combined"
+        os.chdir(currentSub)
+        shutil.copy("/home/dasay/diffusion/abcd_edit.bval", os.getcwd())
+        shutil.copy("/home/dasay/diffusion/abcd_edit.bvec", os.getcwd())
+        mifToNii = "mrconvert run-01_den.mif tmp.nii"
+        proc1 = subprocess.Popen(mifToNii, shell=True, stdout=subprocess.PIPE)
+        proc1.wait()
+        os.remove("run-01_den.mif")
+        niiToMif = "mrconvert tmp.nii run-01_den.mif -fslgrad abcd_edit.bvec abcd_edit.bval"
+        proc2 = subprocess.Popen(niiToMif, shell=True, stdout=subprocess.PIPE)
+        proc2.wait()
+        os.remove("tmp.nii")
+
+def runAll(subDir, rawSubDir, rawPath):
+    verifyModules()
+    makeSubDirs(subDir, rawSubDir)
+    copyData(subDir, rawSubDir, rawPath)
+    dwiDenoise(subDir)
+    createB0(subDir)
+    fixDataStrides(subDir)
+
+
+                        </pre>
+
 
                         </div>
                         <!-- end row -->
