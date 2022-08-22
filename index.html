@@ -121,7 +121,7 @@
                             <li><a href="#line4">DWI Denoise</a></li>
                             <li><a href="#line5">Working on Armis</a></li>
                             <li><a href="#line6">dwifslpreproc</a>
-                                <ul class="nav">
+                                <!--<ul class="nav">
                                     <li><a href="#line7_1">General Options</a></li>
                                     <li><a href="#line7_2">Style Options</a></li>
                                     <li><a href="#line7_3">Header Options</a></li>
@@ -130,6 +130,7 @@
                                     <li><a href="#line7_6">Page Options</a></li>
                                     <li><a href="#line7_7">Import & Export</a></li>
                                 </ul>
+                            -->
                             </li>
                             <li><a href="#line7">Spherical Deconvolution</a></li>
                             <li><a href="#line8">Create Tissue Boundaries</a></li>
@@ -655,7 +656,7 @@ runAll(subDir, rawSubDir, rawPath)
                                 </p>
                                 <p>Next, we get to the createB0 function. This function does several things for us. First, it will go into each subject directory in dtiProc and create a directory called 'combined'. The combined directory will serve as the host directory for several different data files that come from both the dti and fieldmap directories. The overall purpose of the createB0 function is to extract the b-values from both the reverse and primary phase encoded images and combine them into one file. You'll notice that I have the b-values extraction step commented out for the fieldmap (reverse phase encoded) data. In our case, since the fieldmap is just one volume, it is not necessary (or feasible) to do so. However, I've left the commands there as a reference for those who may be in a different situation. We extract the b-values using MRtrix's <i>dwiextract</i> and then comnbine the two files into a B0 image using MRtrix's <i>mrcat</i>. Our final output file should be <strong>b0_pair.mif</strong>. The fixZDir function serves a similar purpose to <i>fslmerge</i> a couple of sections ago. We will be running topup later on as a part of a preprocessing step, so we need to make sure the dimensions in the z direction are even. Here, we accomplish that by running <i>mrgrid</i> on our denoised data. Our output file will have the same name, run-01_den.mif, but you should see our z direction data go up by one when you run <i>mrinfo</i>.
                                 </p>
-                                <p>The final function for this section is fixDataStrides. This function may not be strictly necessary to run, but I've found it useful in the past. There may be instances where, somewhere during processing, the data strides information in the header of your diffusion data gets incorrectly edited. This function should fix that problem. I also use it as a chance to copy my bval and bvec files into the 'combined' directory. The fixDataStrides function simply uses MRtrix's <i>mrconvert</i> command to convert the data from mif to nii, and then back to mif with the fslgrad option. You should lonly have to do this if the data strides in your data read as anything besides: [-1 2 3 4]. You can get this info by running <i>mrinfo</i> on your run-01_den.mif data. The runAll function will run all of the aforementioned functions.
+                                <p>The final function for this section is fixDataStrides. This function may not be strictly necessary to run, but I've found it useful in the past. There may be instances where, somewhere during processing, the data strides information in the header of your diffusion data gets incorrectly edited. This function should fix that problem. I also use it as a chance to copy my bval and bvec files into the 'combined' directory. The fixDataStrides function simply uses MRtrix's <i>mrconvert</i> command to convert the data from mif to nii format, and then back to mif with the fslgrad option. You should only have to do this if the data strides in your data read as anything besides: [-1 2 3 4]. You can get this info by running <i>mrinfo</i> on your run-01_den.mif data. The runAll function will run all of the aforementioned functions.
                                 </p>
                             </div>
 
@@ -837,34 +838,12 @@ def runAll(subDir, rawSubDir, rawPath):
                         <div class="row">
 
                             <div class="col-md-12">
-                                <p>Lorem the It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English. long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English.</p>
+                                <p>None of the commands we've run so far have demanded very much computational power. However, several of the commands/steps from this point on will run much faster on a supercomputer or HPC cluster than on a personal or local machine. In the case of the CPFRC, we use a cluster called Armis, provided by the University of Michigan for HIPPA protected data. Luckily, Armis exists in a SLURM environment, so the majority of the content found in the following scripts can be used in other SLURM environments found outside of the University of Michigan.
+                                </p>
+                                <p>Let's take a look at how to log into Armis. First, you'll have to connect to the lab server (make sure you're connected to the <a href="https://hits.medicine.umich.edu/accounts-access/wifi-networks/vpn-remote-network-access" target="_blank">VPN</a>). You can do this via the command line, NoMachine or Windows Remote Desktop. Once logged in, you can connect to Armis via the command line or <a href="https://arc.umich.edu/open-ondemand/" target="_blank">Open OnDemand</a>. I will only describe the command line interface here. Execute <i>ssh armis2.arc-ts.umich.edu</i> from the command line and you'll be prompted to enter a password. This will be your Level One password. Next, you'll be prompted to select one of three 2-factor authentication options via Duo. I prefer to use the first option, which sends a notification to your phone for you to approve, but you can use whichever method you like. You should see a 'success' message if everything goes well. The <i>ssh</i> command above can be a bit tedious to type, so I would suggest creating an alias for it and adding it to your .bash_profile or .bashrc file. Read about creating aliases <a href="https://linuxize.com/post/how-to-create-bash-aliases/" target="_blank">here</a>.
+                                </p>
+                                <p>Let's head over to where the explosive sync data is being stored here on Armis. Cd into the explosive sync directory: <i>cd /scratch/seharte_root/seharte99/shared_data/expl</i>.You should see several different directories. The one we'll focus on for now is the dtiProc directory. The dtiProc directory on Armis will largely mirror the dtiProc/subs directory on the lab server. To avoid entering your Level One password dozens of times, I would suggest using the linux commmand <i>rsync</i> and copy the entire dtiProc/subs directory to your Armis dtiProc directory. First, cd into your dtiProc directory on Armis. You could use a command that looks something like this to pull the data:<br><i>`rsync -aruv username@aneshartelab-prod01.med.umich.edu:/PROJECTS/REHARRIS/explosives/dtiProc/subs/ .`</i> This make take a while to run, depending on the number of files you have and their size. Once your data has finished transferring, you're ready to move on to the next preprocessing step: dwifslpreproc. See you there!
                             </div>
-
-                            <div class="col-md-6">
-                                <a href="upload/thumbnail.png" data-rel="prettyPhoto"><img src="images/upload/thumbnail.png" alt="" class="img-responsive img-thumbnail"></a>
-                                <h4>Installation Slider</h4>
-                                <ul>
-                                    <li><strong>Step 1</strong> - Lorem the It is a long established fact that a reader ease read more about WordPress here.</li>
-                                    <li><strong>Step 2</strong> - Lorem the It is a long established fact that a reader will be distracted.. Please read more about WordPress here.</li>
-                                    <li><strong>Step 3</strong> - Lorem the It is a long established fact that a read.</li>
-                                </ul>
-                            </div>
-                            <!-- end col -->
-
-                            <div class="col-md-6">
-                                <a href="upload/thumbnail.png" data-rel="prettyPhoto"><img src="images/upload/thumbnail.png" alt="" class="img-responsive img-thumbnail"></a>
-                                <h4>Updating Slider</h4>
-                                <p>Lorem the It is a long established fact that a reader will be distracted.. Please read more about WordPress here.</p>
-                                <ul>
-                                    <li><strong>Step 1</strong> - Lorem the It is a long established fact that a reader ease read more about WordPress here.</li>
-                                    <li><strong>Step 2</strong> - Lorem the It is a long established fact that a reader will be distracted.. Please read more about WordPress here.</li>
-                                    <li><strong>Step 3</strong> - Lorem the It is a long established fact that a read.</li>
-                                </ul>
-                            </div>
-                            <!-- end col -->
-
-                        </div>
-                        <!-- end row -->
 
                     </section>
                     <!-- end section -->
@@ -879,108 +858,7 @@ def runAll(subDir, rawSubDir, rawPath):
                         </div>
                         <!-- end row -->
 
-                        <div class="row">
-                            <div class="col-md-4">
-                                <a href="upload/thumbnail.png" data-rel="prettyPhoto"><img src="images/upload/thumbnail.png" alt="" class="img-responsive img-thumbnail"></a>
-                            </div>
-
-                            <div class="col-md-8">
-                                <h4 id="line7_1">General Options - </h4>
-                                <p>Lorem the It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English. long established fact that a reader will English.</p>
-                            </div>
-                            <!-- end col -->
-                        </div>
-                        <!-- end row -->
-
-                        <hr>
-
-                        <div class="row">
-                            <div class="col-md-4">
-                                <a href="upload/thumbnail.png" data-rel="prettyPhoto"><img src="images/upload/thumbnail.png" alt="" class="img-responsive img-thumbnail"></a>
-                            </div>
-
-                            <div class="col-md-8">
-                                <h4 id="line7_2">Style Options - </h4>
-                                <p>Lorem the It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English. long established fact that a reader will English.</p>
-                            </div>
-                            <!-- end col -->
-                        </div>
-                        <!-- end row -->
-
-                        <hr>
-
-                        <div class="row">
-                            <div class="col-md-4">
-                                <a href="upload/thumbnail.png" data-rel="prettyPhoto"><img src="images/upload/thumbnail.png" alt="" class="img-responsive img-thumbnail"></a>
-                            </div>
-
-                            <div class="col-md-8">
-                                <h4 id="line7_3">Header Options - </h4>
-                                <p>Lorem the It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English. long established fact that a reader will English.</p>
-                            </div>
-                            <!-- end col -->
-                        </div>
-                        <!-- end row -->
-
-                        <hr>
-
-                        <div class="row">
-                            <div class="col-md-4">
-                                <a href="upload/thumbnail.png" data-rel="prettyPhoto"><img src="images/upload/thumbnail.png" alt="" class="img-responsive img-thumbnail"></a>
-                            </div>
-
-                            <div class="col-md-8">
-                                <h4 id="line7_4">Font Options - </h4>
-                                <p>Lorem the It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English. long established fact that a reader will English.</p>
-                            </div>
-                            <!-- end col -->
-                        </div>
-                        <!-- end row -->
-
-                        <hr>
-
-                        <div class="row">
-                            <div class="col-md-4">
-                                <a href="upload/thumbnail.png" data-rel="prettyPhoto"><img src="images/upload/thumbnail.png" alt="" class="img-responsive img-thumbnail"></a>
-                            </div>
-
-                            <div class="col-md-8">
-                                <h4 id="line7_5">Slider Options - </h4>
-                                <p>Lorem the It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English. long established fact that a reader will English.</p>
-                            </div>
-                            <!-- end col -->
-                        </div>
-                        <!-- end row -->
-
-                        <hr>
-
-                        <div class="row">
-                            <div class="col-md-4">
-                                <a href="upload/thumbnail.png" data-rel="prettyPhoto"><img src="images/upload/thumbnail.png" alt="" class="img-responsive img-thumbnail"></a>
-                            </div>
-
-                            <div class="col-md-8">
-                                <h4 id="line7_6">Page Options - </h4>
-                                <p>Lorem the It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English. long established fact that a reader will English.</p>
-                            </div>
-                            <!-- end col -->
-                        </div>
-                        <!-- end row -->
-
-                        <hr>
-
-                        <div class="row">
-                            <div class="col-md-4">
-                                <a href="upload/thumbnail.png" data-rel="prettyPhoto"><img src="images/upload/thumbnail.png" alt="" class="img-responsive img-thumbnail"></a>
-                            </div>
-
-                            <div class="col-md-8">
-                                <h4 id="line7_7">Import & Export Options - </h4>
-                                <p>Lorem the It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English. long established fact that a reader will English.</p>
-                            </div>
-                            <!-- end col -->
-                        </div>
-                        <!-- end row -->
+                        
 
                     </section>
                     <!-- end section -->
