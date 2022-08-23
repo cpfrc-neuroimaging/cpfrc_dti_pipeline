@@ -121,16 +121,10 @@
                             <li><a href="#line4">DWI Denoise</a></li>
                             <li><a href="#line5">Working on Armis</a></li>
                             <li><a href="#line6">dwifslpreproc</a>
-                                <!--<ul class="nav">
-                                    <li><a href="#line7_1">General Options</a></li>
-                                    <li><a href="#line7_2">Style Options</a></li>
-                                    <li><a href="#line7_3">Header Options</a></li>
-                                    <li><a href="#line7_4">Font Options</a></li>
-                                    <li><a href="#line7_5">Slider Options</a></li>
-                                    <li><a href="#line7_6">Page Options</a></li>
-                                    <li><a href="#line7_7">Import & Export</a></li>
+                                <ul class="nav">
+                                    <li><a href="#line6_1">Sbatch Script</a></li>
+                                    <li><a href="#line6_2">Job Script</a></li>
                                 </ul>
-                            -->
                             </li>
                             <li><a href="#line7">Spherical Deconvolution</a></li>
                             <li><a href="#line8">Create Tissue Boundaries</a></li>
@@ -840,9 +834,13 @@ def runAll(subDir, rawSubDir, rawPath):
                             <div class="col-md-12">
                                 <p>None of the commands we've run so far have demanded very much computational power. However, several of the commands/steps from this point on will run much faster on a supercomputer or HPC cluster than on a personal or local machine. In the case of the CPFRC, we use a cluster called Armis, provided by the University of Michigan for HIPPA protected data. Luckily, Armis exists in a SLURM environment, so the majority of the content found in the following scripts can be used in other SLURM environments found outside of the University of Michigan.
                                 </p>
-                                <p>Let's take a look at how to log into Armis. First, you'll have to connect to the lab server (make sure you're connected to the <a href="https://hits.medicine.umich.edu/accounts-access/wifi-networks/vpn-remote-network-access" target="_blank">VPN</a>). You can do this via the command line, NoMachine or Windows Remote Desktop. Once logged in, you can connect to Armis via the command line or <a href="https://arc.umich.edu/open-ondemand/" target="_blank">Open OnDemand</a>. I will only describe the command line interface here. Execute <i>ssh armis2.arc-ts.umich.edu</i> from the command line and you'll be prompted to enter a password. This will be your Level One password. Next, you'll be prompted to select one of three 2-factor authentication options via Duo. I prefer to use the first option, which sends a notification to your phone for you to approve, but you can use whichever method you like. You should see a 'success' message if everything goes well. The <i>ssh</i> command above can be a bit tedious to type, so I would suggest creating an alias for it and adding it to your .bash_profile or .bashrc file. Read about creating aliases <a href="https://linuxize.com/post/how-to-create-bash-aliases/" target="_blank">here</a>.
+                                <p>Connecting to Armis- First, you'll have to connect to the lab server (make sure you're connected to the <a href="https://hits.medicine.umich.edu/accounts-access/wifi-networks/vpn-remote-network-access" target="_blank">VPN</a>). You can do this via the command line, NoMachine or Windows Remote Desktop. Once logged in, you can connect to Armis via the command line or <a href="https://arc.umich.edu/open-ondemand/" target="_blank">Open OnDemand</a>. I will only describe the command line interface here. Execute <i>ssh armis2.arc-ts.umich.edu</i> from the command line and you'll be prompted to enter a password. This will be your Level One password. Next, you'll be prompted to select one of three 2-factor authentication options via Duo. I prefer to use the first option, which sends a notification to your phone for you to approve, but you can use whichever method you like. You should see a 'success' message if everything goes well. The <i>ssh</i> command above can be a bit tedious to type, so I would suggest creating an alias for it and adding it to your .bash_profile or .bashrc file. Read about creating aliases <a href="https://linuxize.com/post/how-to-create-bash-aliases/" target="_blank">here</a>.
                                 </p>
-                                <p>Let's head over to where the explosive sync data is being stored here on Armis. Cd into the explosive sync directory: <i>cd /scratch/seharte_root/seharte99/shared_data/expl</i>.You should see several different directories. The one we'll focus on for now is the dtiProc directory. The dtiProc directory on Armis will largely mirror the dtiProc/subs directory on the lab server. To avoid entering your Level One password dozens of times, I would suggest using the linux commmand <i>rsync</i> and copy the entire dtiProc/subs directory to your Armis dtiProc directory. First, cd into your dtiProc directory on Armis. You could use a command that looks something like this to pull the data:<br><i>`rsync -aruv username@aneshartelab-prod01.med.umich.edu:/PROJECTS/REHARRIS/explosives/dtiProc/subs/ .`</i> This make take a while to run, depending on the number of files you have and their size. Once your data has finished transferring, you're ready to move on to the next preprocessing step: dwifslpreproc. See you there!
+                                <p>Let's head over to where the explosive sync data is being stored here on Armis. Cd into the explosive sync directory: <i>cd /scratch/seharte_root/seharte99/shared_data/expl</i>.You should see several different directories. Notice the scripts directory with sbatch and pipeline sub-directories. This is where all the scripts that we'll run on Armis are stored, including cluster submissions and head node scripts. The sbatch sub-directory has a sub-directory for each of the jobs we'll submit to Armis. I've found that organizing the scripts in this mannner proves helpful as job scripts start to pile up. That being said, feel free to organize your scripts however makes most sense to you. 
+                                </p>
+                                <p>
+                                Cd to the dtiProc directory. The dtiProc directory on Armis will largely mirror the dtiProc/subs directory on the lab server. To avoid entering your Level One password dozens of times, I would suggest using the linux commmand <i>rsync</i> and copy the entire dtiProc/subs directory to your Armis dtiProc directory. First, cd into your dtiProc directory on Armis. You could use a command that looks something like this to pull the data:<br><strong>rsync -aruv user@aneshartelab-prod01.med.umich.edu:/PROJECTS/REHARRIS/explosives/dtiProc/subs/ .</strong> This make take a while to run, depending on the number of files you have and their size. Once your data has finished transferring, you're ready to move on to the next preprocessing step: dwifslpreproc. See you there!
+                                </p>
                             </div>
 
                     </section>
@@ -858,11 +856,13 @@ def runAll(subDir, rawSubDir, rawPath):
                         </div>
                         <!-- end row -->
 
-                        <p>MRtrix's <i>dwifslpreproc</i> command is the finale of all the preprocessing we've done up to this point. This command uses a blend of MRtrix original data preprocessing techniques along with FSL's topup and eddy current correction. To speed up processing time, we'll submit a processing job to Armis for each of the subjects. Without greater computing power and parallelization, it would take a regular computer upwards of 65 hours to process 30 subjects. An HPC cluster cuts that down to less than an hour. 
+                        <p>MRtrix's <i>dwifslpreproc</i> command is the finale of all the preprocessing we've done up to this point. This command uses a blend of MRtrix original data preprocessing techniques along with FSL's topup and eddy current correction. To speed up processing time, we'll submit a processing job to Armis for each of the subjects. Without greater computing power and parallelization, it would take a regular computer upwards of 65 hours to process 30 subjects. An HPC cluster cuts that down to less than an hour. Download both scripts from this section <a href="scripts/dwifslpreproc.zip" download="dwifslpreproc">here</a>.
                         </p>
 
-                        <p>Lines 1-20 comprise what's known as the sbatch preamble. This is how you request resources from the cluster management system and tell them which account to bill. Enter your email address on line 4 to be notified when the jobs complete, fail or are cancelled. Make sure you enter the faculty member's account you're using on line 7. Next, the script will load the necessary modules. Luckily for us, the <i>module load mrtrix</i> command also loads FSL and CUDA which are necessary for dwifslpreproc to run in an HPC environment. You can edit the USERNAME on line 31 to whatever you'd like, but it is not strictly necessary. 
+                        <p id="line6_1">Lines 1-20 comprise what's known as the sbatch preamble. This is how you request resources from the cluster management system and tell them which account to bill. Enter your email address on line 4 to be notified when the jobs complete, fail or are cancelled. Make sure you enter the faculty member's account you're using on line 7. Next, the script will load the necessary modules. Luckily for us, the <i>module load mrtrix</i> command also loads FSL and CUDA, which are necessary for dwifslpreproc to run in an HPC environment. You can edit the USERNAME on line 30 to whatever you'd like, but it is not strictly necessary. You will need to edit the SOURCE_DIR variable on line 36 to contain the path to your project's "home" directory. Line 40 copies the data from the combined directory to the temporary BIDS directory. Lines 42-55 simply print out some information about the job being executed on Armis. Lines 65-69 contain the actual dwifslpreproc command that we're running. Once it's finished running, the output will be copied to a specified directory on line 75. If all goes well, you should have output data for all subjects at <i>/scratch/seharte_root/seharte99/shared_data/expl/dwifslpreproc</i>
                         </p>
+
+                        <h4>Sbatch Script</h4>
 
                         <pre class="brush: bash">
 #!/bin/bash
@@ -947,6 +947,23 @@ rm -rf $TMPDIR
 
 
                         </pre>
+
+                    <p id="line6_2">Running the script above requires the use of what's commonly called a job submit script. It's pretty simple to use, but there are a few key details that should not be overlooked. Take a look at the example below. We have a for-loop that's looping through a text file containing a list of all the subjects we want to run. Make sure that text file is in the same directory as your job script. You don't need to edit lines six or seven. On line eight, you need to tell the script where to spit out the log file. You also need to make sure the directory you point it to is created <i>before</i> you execute the job script. Finally, make sure you include the name of your sbatch script at the end of line eight. To execute this script, type <i>source submitdwifslpreproc.sh</i>. You should see several messages in the terminal indicating that your jobs were submitted to the cluster. You can check the status of your jobs by typing <i>squeue -u your_username</i> in the command window.
+                    </p>
+
+                    <h4>Job Script</h4>
+
+                    <pre class="brush: bash">
+#!/bin/bash
+
+for subject in $(cat sublist.txt); do
+
+        export subject
+        echo "Submitting $subject"
+        sbatch --job-name=$subject --output=/scratch/seharte_root/seharte99/shared_data/expl/job_output/$subject-%j.log dwifslpreprocSbatch.sh
+
+done
+                    </pre>
 
                     </section>
                     <!-- end section -->
