@@ -1237,7 +1237,13 @@ normalizeData(procDir, noRunList)
                             <p>Part of our ultimate goal in this pipeline is to run a streamline analysis which will place seeds at random locations along the grey-white matter boundary. A streamline grows from each seed until it terminates in another region. A necessary precursor to the streamline analysis is creating said boundary between the grey and white matter. As in previous sections, we'll walk through this script function by function. Downloaded it <a href="scripts/preproc03.py.zip" download="tissueBoundary">here</a>.
                             </p>
 
-                            <p>Our script starts with the procDir variable that needs to be updated to reflect the path to the dtiProc data for your project. The first two functions are probably starting to look familiar at this point, our old friends <i>verifyModules</i> and <i>checkIfCompleted</i>. The <i>checkIfCompleted</i> function looks for the final output file, <strong>gmwmSeed_coreg.mif</strong>, in each subject's directory. If it's there, that subject will be skipped. Note that individual subject files will have to be deleted if re-processing is desired. For this script <i>verifyModules</i> will just make sure that we have MRtrix loaded up.
+                            <p>Our script starts with the procDir variable that needs to be updated to reflect the path to the dtiProc directory for your project. The first two functions are probably starting to look familiar at this point, our old friends <i>verifyModules</i> and <i>checkIfCompleted</i>. The <i>checkIfCompleted</i> function looks for the final output file, <strong>gmwmSeed_coreg.mif</strong>, in each subject's directory. If it's there, that subject will be skipped. Note that individual subject files will have to be deleted if re-processing is desired. For this script <i>verifyModules</i> will just make sure that we have MRtrix and FSL loaded up.
+                            </p>
+
+                            <p>This script marks the beginning of our use of the anatomical data. The first thing we have to do is get the anatomical data into mif format. <i>segmentAnat</i> does that for us using MRtrix's <i>mrconvert</i> command. After the conversion is done, <i>segmentAnat</i> will run MRtrix's <i>5ttgen</i> command with the fsl option. <i>5ttgen</i> segments the anatomical image into five tissue types: grey matter, subcortical grey matter, white matter, cerebrospinal fluid and pathological tissue. After <i>segmentAnat</i>, we get to <i>dwiExtract</i>. This function performs a coregistration of our anatomical and diffusion data. Once that's finished, we're ready to create our white/grey matter boundary!
+                            </p>
+
+                            <p>If you read ahead in the script, you probably noticed that our next function, <i>fslFlirt</i>, is a bit of a monster. This is largely due to the fact that this step is being carried out with FSL commands, so we have to convert the format of our data from mif to nii and back to mif. We'll convert both the segmented anatomical image and the coregistered image to nii.gz format. After they're converted, we need to change the coregistered image from a 4D dataset to a single 3D image for the FSL flirt command using FSL's <i>fslroi</i> command. Moving on to FSL's <i>flirt</i> command, this command will coregister the combined diffusion/anatomical data with the grey matter segmentation data. The output of <i>flirt</i> is a matrix which overlays the diffusion image on the grey matter segmentation. With this matrix in hand, we can convert it to a format that can be read by MRtrix using the <i>transformconvert</i> and <i>mrtransform</i> commands. Finally, we arrive at the grande finale of this script: creating the boundary. We use MRtrix's <i>5tt2gmwi</i> command and voilà! We have our grey-white matter boundary. On to recon-all!
                             </p>
 
 
@@ -1256,14 +1262,14 @@ def verifyModules():
     print("Modules loaded:")
     os.system("module list")
     while True:
-            loaded = input("\nFor this script, you need the mrtrix module loaded.\nIs it listed above? If so, type yes and hit enter. \nIf not, please type no and hit enter.\n")
+            loaded = input("\nFor this script, you need the mrtrix and fsl modules loaded.\nAre they listed above? If so, type yes and hit enter. \nIf not, please type no and hit enter.\n")
             if loaded == "yes" or loaded == "y" or loaded == "Yes" or loaded == "YES":
                 print("great! running script...")
                 break
             elif loaded == "no" or loaded == "n" or loaded == "No" or loaded == "NO":
-                print("\nplease load mrtrix using the following command:\n")
-                print("module load mrtrix\n")
-                print("after loading the module, relaunch the script")
+                print("\nplease load mrtrix and fsl using the following command:\n")
+                print("module load mrtrix fsl\n")
+                print("after loading the modules, relaunch the script")
                 sys.exit()
 
 
