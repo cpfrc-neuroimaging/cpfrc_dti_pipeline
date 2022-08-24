@@ -128,7 +128,12 @@
                             </li>
                             <li><a href="#line7">Spherical Deconvolution</a></li>
                             <li><a href="#line8">Create Tissue Boundaries</a></li>
-                            <li><a href="#line9">Freesurfer Recon-all</a></li>
+                            <li><a href="#line9">FreeSurfer Recon-all</a>
+                                <ul class="nav">
+                                    <li><a href="#line9_1">Recon-all Sbatch Script</a></li>
+                                    <li><a href="#line9_2">Recon-all Job Script</a></li>
+                                </ul>
+                            </li>
                             <li><a href="#line10">Creating the Connectome</a></li>
                         </ul>
                     </nav >
@@ -161,7 +166,7 @@
                                                 <li>Python version >= 3.8 </li>
                                                 <li>MRtrix version 3.0.3 (install <a href="https://mrtrix.readthedocs.io/en/latest/installation/before_install.html" target="_blank">instructions</a>)</li>
                                                 <li>FSL version >= 6.0.0 (install <a href="https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FslInstallation" target="_blank">instructions</a>)</li>
-                                                <li>Freesurfer version >= 6.0 (install <a href="https://surfer.nmr.mgh.harvard.edu/fswiki/DownloadAndInstall" target="_blank">instructions</a>)</li>
+                                                <li>FreeSurfer version >= 6.0 (install <a href="https://surfer.nmr.mgh.harvard.edu/fswiki/DownloadAndInstall" target="_blank">instructions</a>)</li>
                                                 <li>ANTs (install <a href="http://stnava.github.io/ANTs/" target="_blank">instructions</a>)</li>
                                             </ol>
                                         </div>
@@ -222,7 +227,7 @@
                         <!-- end row -->
 
 
-                        <p>Because of a recent update to the scanner software from GE, the first thing we have to do is create fieldmaps for each of our subjects. To do so, we will be using various fsl commands. In addition to creating fieldmaps for each subject, we also have to copy over the appropriate bval and bvec files. The bval and bvec files found in the 'DTI' folder are incorrect, so we will be using bval and bvec files originally from the ABCD study that have been modified for our needs. As a general rule, the number of lines in your bval and bvec files should match the number of volumes in your diffusion data. If you'd like to see an example of bval and bvec files, download <a href="abcd/abcd_example.zip" download="example">here</a>. The data from the explosive sync study has 104 volumes, so our bval and bvec files have been edited to match.
+                        <p>Because of a recent update to the scanner software from GE, the first thing we have to do is create fieldmaps for each of our subjects. To do so, we will be using various fsl commands. In addition to creating fieldmaps for each subject, we also have to copy over the appropriate bval and bvec files. The bval and bvec files found in the 'DTI' folder are incorrect, so we will be using bval and bvec files originally from the ABCD study that have been modified for our needs. As a general rule, the number of lines in your bval and bvec files should match the number of volumes in your diffusion data. If you'd like to see an example of bval and bvec files, download <a href="abcd/abcd_example.zip" download="abcd_example">here</a>. The data from the explosive sync study has 104 volumes, so our bval and bvec files have been edited to match.
                         </p>
 
                         <p>Let's look at the first script below. This script will copy over the bvec and bval files that we've edited to the main 'DTI' directory and then create fieldmaps using a bash script (more on that later). You will need to edit lines 14 and 15 for your specific needs. The dtiProc directory should point to the new directory you created in the Data Organization section. The rawDir should point to the directory that contains all of your subjects' raw data. Line 16 can be left alone if you're working in the CPFRC environment, otherwise you want to change it to the name of the directory where each subject's diffusion lives. For example, any given subject in the rawDir may have several sub-directories including functional, anatomical and diffusion data. If the name of the diffusion data sub-directory is the same for each subject, change the value in line 16 accordingly.
@@ -936,7 +941,7 @@ dwifslpreproc run-01_den.mif run-01_den_preproc.mif \
     -eddy_options " --slm=linear --data_is_shelled"
 
 
-# Copy the results out for posterity
+# Copy the results out of TMPDIR
 echo "Copying $OUTPUT_DIR/$participant to ${SOURCE_DIR}/dwifslpreproc"
 mkdir -p ${SOURCE_DIR}/dwifslpreproc/${participant}
 rsync -arv ${BIDS_DIR}/ ${SOURCE_DIR}/dwifslpreproc/${participant}
@@ -1467,19 +1472,122 @@ createBoundary(procDir, noRunList)
 
                         <div class="row">
                             <div class="col-md-12 left-align">
-                                <h2 class="dark-text">Freesurfer Recon-all<hr></h2>
+                                <h2 class="dark-text">FreeSurfer Recon-all<hr></h2>
                             </div>
                             <!-- end col -->
                         </div>
                         <!-- end row -->
 
-                        <div class="row">
-                            <div class="col-md-12">
-                                <p>
-                                </p>
-                            </div>
-                        </div>
-                        <!-- end row -->
+                        <p>Pause for a second and congratulate yourself for making it to this point in the documentation. We've covered a lot of ground; hopefully you've found success processing your data thus far. In this section, we're taking a small detour out of MRtrix to FreeSurfer. FreeSurfer is a neuroimaging software that specializes in analysis of anatomical images. Our ultimate goal of creating a connectome is made possible by FreeSurfer's <i>recon-all</i> command. <i>recon-all</i> performs several functions. Most notably for our purposes, it takes a 3D anatomical volume and reconstructs it into a two-dimensional surface and performs atlas-based parcellation. <i>recon-all</i> is very computationally intensive so we will be submiting another job to Armis to help speed up the process. Download the sbatch and job scripts <a href="scripts/recon-all.zip" download="recon_all">here</a>.
+                        </p>
+
+                        <p id="line9_1">Our sbatch script here is similar to the one we created for <i>dwifslpreproc</i>, but with a few key differences. Like before, you will need to make edits on lines five and eight in the preamble. Notice that the partition on line nine says 'standard' this time instead of 'gpu' and we've increased the memory and cpu allocation on lines 14 and 15. You can optionally make an edit on line 32 to the name of the TMPDIR. On line 45, notice that we are only copying the subject's T1 data into the BIDS directory. Though this should've been taken care of automatically in previous steps, make sure that each subject's anatomical data is in their dtiProc directory. You'll have to edit line 45 to reflect the path to your data along with the name of your T1 file. You don't need to mess with lines 47-60 unless you want to. On line 71, make sure your <i>recon-all</i> command accurately reflects the name of your T1 input file. After <i>recon-all</i> finishes running, it will export the results to whatever path you specify as seen on line 78. The max wall-time is set for 12 hours in this script, but it should take somewhere between 8-10 hours for most subjects. <i>recon-all</i> spits out tons of files, so don't get overwhelmed when you see the output!
+                        </p>
+
+                        <h4>Recon-all Sbatch Script</h4>
+
+                        <pre class="brush: bash">
+#!/bin/bash
+
+###SBATCH --job-name=$subject
+#SBATCH --mail-user=user@example.com
+#SBATCH --mail-type=END,FAIL
+
+#SBATCH --account=FACULTY ACCOUNT
+#SBATCH --partition=standard
+
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=16gb
+
+#SBATCH --time=12:00:00
+#SBATCH --export=ALL
+
+#### End SBATCH preamble
+
+module purge
+module load fsl
+module load freesurfer
+
+my_job_header
+
+# Set participant name
+participant=$subject
+
+# Create a local directory in which to work
+
+TMPDIR=$(mktemp -d /tmp/USERNAME-recon-all.XXXXXXXXX)
+cd $TMPDIR
+mkdir BIDS
+
+
+# Set the names of the FreeSurfer diretories. 
+
+SOURCE_DIR=/scratch/seharte_root/seharte99/shared_data/expl
+BIDS_DIR=$PWD/BIDS
+FREESURFER_WORK=$BIDS_DIR
+SUBJECTS_DIR=$BIDS_DIR
+
+# Get the needed BIDS data; print only the summary statistics from the copy
+rsync -a --info=STATS /scratch/seharte_root/seharte99/shared_data/expl/dtiProc/$participant/t1spgr_208sl.nii ./BIDS
+
+# Print some information about the run that might be useful
+echo "#---------------------------------------------------------------------#"
+echo "Running on           :  $(hostname -s)"
+echo "Processor type       :  $(lscpu | grep 'Model name' | sed 's/[ \t][ ]*/ /g')"
+echo "Assigned processors  :  $(cat /sys/fs/cgroup/cpuset/slurm/uid_${EUID}/job_${SLURM_JOBID}/cpuset.cpus)"
+echo "Assigned memory nodes:  $(cat /sys/fs/cgroup/cpuset/slurm/uid_${EUID}/job_${SLURM_JOBID}/cpuset.mems)"
+echo "======================================================================="
+echo "/tmp space"
+df -h /tmp
+echo "======================================================================="
+echo "Memory usage"
+free
+echo "#---------------------------------------------------------------------#"
+echo
+
+
+
+# Run it
+source /etc/profile.d/http_proxy.sh
+
+cd BIDS
+
+### recon-all command
+
+recon-all -i t1spgr_208sl.nii \
+    -s sub-${participant}_T1w_recon -all
+
+# Copy the results out of TMPDIR
+echo "Copying $OUTPUT_DIR/$participant to ${SOURCE_DIR}/recon-all"
+mkdir -p ${SOURCE_DIR}/recon-all/${participant}
+rsync -arv ${BIDS_DIR}/ ${SOURCE_DIR}/recon-all/${participant}/
+
+# Change out of the $TMPDIR and remove it
+cd
+rm -rf $TMPDIR
+
+                        </pre>
+
+                    <p id="line9_2">This job script functions very similarly to our <i>dwifslpreproc</i> job script. The only differences are the path to the log file on line eight and the name of the sbatch script that's being called (recon_allSbatch.sh). Edit the line eight according to your needs and make sure the sublist.txt file and sbatch script are in the same directory. Execute the job script by typing <i>source recon_allJob.sh</i> in the command window. You'll see several 'job submitted' messages in the command window. Use <i>squeue -u username</i> to check the status of your jobs. You'll also get emailed when each job is completed or fails.
+                    </p>
+
+                    <h4>Recon-all Job Script</h4>
+
+                    <pre class="brush: bash">
+#!/bin/bash
+
+for subject in $(cat sublist.txt); do
+
+        export subject
+        echo "Submitting $subject"
+        sbatch --job-name=$subject --output=/scratch/seharte_root/seharte99/shared_data/expl/job_output/recon-all/$subject-%j_recon_all.log recon_allSbatch.sh
+
+done
+
+                    </pre>
 
                     </section>
                     <!-- end section -->
