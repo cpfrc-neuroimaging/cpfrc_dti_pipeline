@@ -1601,15 +1601,141 @@ done
                             <!-- end col -->
                         </div>
                         <!-- end row -->
+                        <p>
+                        </p>
 
-                        <div class="row">
-                            <div class="col-md-12">
-                                
-                                <p>
-                                </p>
-                            </div>
-                        </div>
-                        <!-- end row -->
+                    <pre class="brush: python">
+import os
+import subprocess
+import sys
+
+
+procDir = "/scratch/seharte_root/seharte99/shared_data/expl/dtiProc"
+recon_allDir = "/scratch/seharte_root/seharte99/shared_data/expl/recon-all"
+
+
+def verifyModules():
+    print("Modules loaded:")
+    os.system("module list")
+    while True:
+            loaded = input(f"\n{bcolors.WARNING}For this script, you need the mrtrix and freesurfer modules loaded.\nAre they listed above? If so, type yes and hit enter. \nIf not, please type no and hit enter.\n{bcolors.ENDC}")
+            if loaded == "yes" or loaded == "y" or loaded == "Yes" or loaded == "YES":
+                print("great! running script...")
+                break
+            elif loaded == "no" or loaded == "n" or loaded == "No" or loaded == "NO":
+                print("\nplease load mrtrix and freesurfer using the following command:\n")
+                print("module load mrtrix freesurfer\n")
+                print("after loading the module, relaunch the script")
+                sys.exit()
+
+
+def checkIfCompleted(procDir):
+    os.chdir(procDir)
+    noRunSubList = []
+    for sub in os.listdir(os.getcwd()):
+        os.chdir(sub)
+        if os.path.isfile("sub-CON02_parcels.csv"):
+            print("all steps have already been run on subject " + sub)
+            noRunSubList.append(sub)
+            os.chdir(procDir)
+        os.chdir(procDir)
+    return noRunSubList
+
+def labelConvert(procDir, noRunList, recon_allDir):
+    for sub in getSubListLabelConvert(procDir, noRunList):
+        os.chdir(sub)
+        print("copying aparc+aseg.mgz file to dtiProc...")
+        copyAparc = f"cp {recon_allDir}/{sub}/mri/aparc+aseg.mgz ."
+        proc1 = subprocess.Popen(copyAparc, shell=True, stdout=subprocess.PIPE)
+        proc1.wait()
+        if os.path.isfile(f"aparc+aseg.mgz"):
+            print("successfully copied aparc+aseg.mgz for subject " + sub)
+        else:
+            print("did NOT successfully copy aparc+aseg.mgz for subject " + sub + ". please check")
+        print("running labelconvert on subject " + sub + "...")
+        labelconvert = f"""
+                labelconvert aparc+aseg.mgz $FREESURFER_HOME/FreeSurferColorLUT.txt \
+                /sw/arcts/centos7/mrtrix/3.0.3/share/mrtrix3/labelconvert/fs_default.txt \
+                {sub}_parcels.mif
+                """
+        proc2 = subprocess.Popen(labelconvert, shell=True, stdout=subprocess.PIPE)
+        proc2.wait()
+        if os.path.isfile(f"{sub}_parcels.mif"):
+            print("labelconvert ran successfully for subject " + sub)
+        else:
+            print("labelconvert did NOT run successfully for subject " + sub + ". please check")
+        os.chdir(procDir)
+
+def getSubListLabelConvert(procDir, noRunList):
+    os.chdir(procDir)
+    subList = []
+    for sub in os.listdir(os.getcwd()):
+        if sub in noRunList:
+            continue
+        os.chdir(sub)
+        if os.path.isfile(f"{sub}_parcels.mif"):
+            print("labelconvert has already been run on subject " + sub + ". Moving to next subject...")
+            os.chdir(procDir)
+            continue
+        else:
+            subList.append(sub)
+        os.chdir(procDir)
+    return subList
+
+def tck2Connectome(procDir, noRunList):
+    for sub in getSubListTck2Connectome(procDir, noRunList):
+        os.chdir(sub)
+        print("running tck2connectome on subject " + sub + "...")
+        tck2connectome = f"""
+                    tck2connectome -symmetric -zero_diagonal -scale_invnodevol \
+                    -tck_weights_in sift_1M.txt tracks_10M.tck \
+                    {sub}_parcels.mif {sub}_parcels.csv \
+                    -out_assignment assignments_{sub}_parcels.csv
+                    """
+        proc1 = subprocess.Popen(tck2connectome, shell=True, stdout=subprocess.PIPE)
+        proc1.wait()
+        if os.path.isfile(f"{sub}_parcels.csv"):
+            print("tck2connectome ran successfully for subject " + sub)
+        else:
+            print("tck2connectome did NOT run successfully for subject " + sub + ". please check")
+        os.chdir(procDir)
+
+def getSubListTck2Connectome(procDir, noRunList):
+    os.chdir(procDir)
+    subList = []
+    for sub in os.listdir(os.getcwd()):
+        if sub in noRunList:
+            continue
+        os.chdir(sub)
+        if os.path.isfile(f"{sub}_parcels.csv"):
+            print("tck2connectome has already been run on subject " + sub + ". Moving to next subject...")
+            os.chdir(procDir)
+            continue
+        else:
+            subList.append(sub)
+        os.chdir(procDir)
+    return subList
+
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+
+checkIfCompleted(procDir)
+verifyModules()
+noRunList = checkIfCompleted(procDir)
+labelConvert(procDir, noRunList, recon_allDir)
+tck2Connectome(procDir, noRunList)
+
+                        
+                    </pre>
 
                     </section>
                     <!-- end section -->
