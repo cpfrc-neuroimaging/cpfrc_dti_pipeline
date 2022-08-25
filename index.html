@@ -1740,8 +1740,12 @@ done
                             <!-- end col -->
                         </div>
                         <!-- end row -->
-                        <p>
+                        <p>You've made it to the climax of this documentation: creating the connectome. Let's finish out strong.<br>Our connectome script starts out similarly to our previous Python scripts; we have a couple of path variables to update and we have the familiar <i>verifyModules</i> and <i>checkIfCompleted</i> functions. Our procDir path variable is the same as previous scripts. The recon-allDir needs to point to the output of your recon-all command. This script requires MRtrix and FreeSurfer and our final output file is a csv file called <strong>$SUBNAME_parcels.csv</strong>. You may have noticed that the <i>verifyModules</i> script now has a yellow color warning message. That's where the <i>bcolors</i> class from line 113 is being used. I'm experimenting with the yellow warning message versus the default black and white and any feedback/expressed peference would be appreciated. Download the script <a href="scripts/connectome.py.zip" download="create_connectome">here</a>. 
                         </p>
+
+                        <p>The first function we come across after <i>verifyModules</i> and <i>checkIfCompleted</i> is <i>labelConvert</i> on line 38. <i>labelConvert</i> will help us make use of the parcellations that FreeSurfer created for us. First, it will copy each subject's aparc+aseg.mgz file to their dtiProc directory. Next, it will convert the aparc file into a format that MRtrix can understand via the FreeSurfer's <i>labelconvert</i> command. Finally, the <i>tck2Connectome</i> functions takes us home. We use MRtrix's <i>tck2connectome</i> command to combine the streamlines and parcellations to create our connectome and spit out a csv file. 
+                        </p>
+
 
                     <pre class="brush: python">
 import os
@@ -1773,7 +1777,7 @@ def checkIfCompleted(procDir):
     noRunSubList = []
     for sub in os.listdir(os.getcwd()):
         os.chdir(sub)
-        if os.path.isfile("sub-CON02_parcels.csv"):
+        if os.path.isfile(f"{sub}_parcels.csv"):
             print("all steps have already been run on subject " + sub)
             noRunSubList.append(sub)
             os.chdir(procDir)
@@ -1875,6 +1879,9 @@ tck2Connectome(procDir, noRunList)
 
                         
                     </pre>
+
+                    <p>
+                    </p>
 
                     </section>
                     <!-- end section -->
