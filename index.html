@@ -134,7 +134,13 @@
                                     <li><a href="#line9_2">Recon-all Job Script</a></li>
                                 </ul>
                             </li>
-                            <li><a href="#line10">Creating the Connectome</a></li>
+                            <li><a href="#line10">Generating Streamlines</a>
+                                <ul class="nav">
+                                    <li><a href="#line10_1">Streamlines Sbatch Script</a></li>
+                                    <li><a href="#line10_2">Streamlines Job Script</a></li>
+                                </ul>
+                            </li>
+                            <li><a href="#line11">Creating the Connectome</a></li>
                         </ul>
                     </nav >
                 </div>
@@ -1593,6 +1599,133 @@ done
                     <!-- end section -->
 
                     <section id="line10" class="section">
+
+                        <div class="row">
+                            <div class="col-md-12 left-align">
+                                <h2 class="dark-text">Generating Streamlines<hr></h2>
+                            </div>
+                            <!-- end col -->
+                        </div>
+                        <!-- end row -->
+
+                        <p>The streamlines we're creating in this section represent the white matter tracts that connect anatomically distinct regions of grey matter. These estimates that MRtrix creates are probabilistically created based on anatomically constrained tractography (ACT). ACT will only label a streamline as valid if it is biologically plausible. For example, an invalid streamline could be one that terminates in CSF and thus is not biologically plausible. We can create the streamlines with MRtrix's <i>tckgen</i> command. We will be creating 10 million streamlines so it will take some time. Sounds like a perfect job for Armis! We will also include <i>tcksift2</i> in our sbatch script. <i>tcksift2</i> serves to correct any overfitting of streamlines that may have happened during the <i>tckgen</i> command. Overfitting can happen when certain tracts have clearer FOD's, thus making them better candidates for the probabalistic modeling that ACT does. <i>tcksift2</i> helps us hedge against that possibility. Download the scripts <a href="scripts/tractography.zip" download="generate_streamlines">here</a>.
+                        </p>
+
+                        <p id="#line10_1">Just as in previous sbatch scripts we've created, you will need to edit the email and faculty account in your own script along with the name of the TMPDIR on line 31. You'll notice that lines 40-42 have several <i>rsync</i> commands. We just need three files from each subject's dtiProc directory, so there's no reason to copy the entire directory into our temporary processing directory. The <i>rsync</i> command on line 44 can be uncommented if you've already run <i>tckgen</i> on a subject and you just want to run <i>tcksift2</i>. Lines 69-72 and 76-78 contain our <i>tckgen</i> and <i>tcksift2</i> commands. The output files from our commands will be sent to a directory named 'tractography'. Feel free to tweak the output data's destination. Now that we've got our streamlines, we're ready to put it all together and create our connectome!
+                        </p>
+
+                        <h4>Streamlines Sbatch Script</h4>
+
+                    <pre class="brush: bash">
+#!/bin/bash
+
+###SBATCH --job-name=$subject
+#SBATCH --mail-user=user@example.com
+#SBATCH --mail-type=END,FAIL
+
+#SBATCH --account=FACULTY ACCOUNT
+#SBATCH --partition=standard
+
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=16gb
+
+#SBATCH --time=5:00:00
+#SBATCH --export=ALL
+
+#### End SBATCH preamble
+
+module purge
+module load mrtrix
+
+my_job_header
+
+# Set participant name
+participant=$subject
+
+# Create a local directory in which to work
+TMPDIR=$(mktemp -d /tmp/USERNAME-tractography.XXXXXXXXX)
+cd $TMPDIR
+mkdir BIDS
+
+# Set the names of the tractography diretories.
+SOURCE_DIR=/scratch/seharte_root/seharte99/shared_data/expl
+BIDS_DIR=$PWD/BIDS
+
+# Get the needed BIDS data; print only the summary statistics from the copy
+rsync -a --info=STATS /scratch/seharte_root/seharte99/shared_data/expl/dtiProc/$participant/5tt_coreg.mif ./BIDS
+rsync -a --info=STATS /scratch/seharte_root/seharte99/shared_data/expl/dtiProc/$participant/gmwmSeed_coreg.mif ./BIDS
+rsync -a --info=STATS /scratch/seharte_root/seharte99/shared_data/expl/dtiProc/$participant/wmfod_norm.mif ./BIDS
+# only do this if first command was run previously
+#rsync -a --info=STATS /scratch/seharte_root/seharte99/shared_data/expl/dtiProc/$participant/tracks_10M.tck ./BIDS
+
+# Print some information about the run that might be useful
+echo "#---------------------------------------------------------------------#"
+echo "Running on           :  $(hostname -s)"
+echo "Processor type       :  $(lscpu | grep 'Model name' | sed 's/[ \t][ ]*/ /g')"
+echo "Assigned processors  :  $(cat /sys/fs/cgroup/cpuset/slurm/uid_${EUID}/job_${SLURM_JOBID}/cpuset.cpus)"
+echo "Assigned memory nodes:  $(cat /sys/fs/cgroup/cpuset/slurm/uid_${EUID}/job_${SLURM_JOBID}/cpuset.mems)"
+echo "======================================================================="
+echo "/tmp space"
+df -h /tmp
+echo "======================================================================="
+echo "Memory usage"
+free
+echo "#---------------------------------------------------------------------#"
+echo
+
+
+# Run it
+source /etc/profile.d/http_proxy.sh
+
+cd BIDS
+
+### tractography command
+
+tckgen -act 5tt_coreg.mif \
+    -backtrack -seed_gmwmi gmwmSeed_coreg.mif \
+    -nthreads 8 -maxlength 250 -cutoff 0.06 \
+    -select 10000000 wmfod_norm.mif tracks_10M.tck
+
+### overfitting command
+
+tcksift2 -act 5tt_coreg.mif \
+    -out_mu sift_mu.txt -out_coeffs sift_coeffs.txt \
+    -nthreads 8 tracks_10M.tck wmfod_norm.mif sift_1M.txt
+
+# Copy the results out for posterity
+echo "Copying $OUTPUT_DIR/$participant to ${SOURCE_DIR}/tractography"
+mkdir -p ${SOURCE_DIR}/tractography/${participant}
+rsync -arv ${BIDS_DIR}/ ${SOURCE_DIR}/tractography/${participant}
+
+# Change out of the $TMPDIR and remove it
+cd
+rm -rf $TMPDIR
+
+                    </pre>
+
+                    <h4>Streamlines Job Script</h4>
+
+                    <p id="#line10_2">Our job script here is the same as our previous iterations. Update the log file path and the name of the sbatch file to match your own. Ensure that your sublist.txt file and sbatch script are in the same directory as this job script. Execute this script then sit back and "watch" your streamlines get created! 
+                    </p>
+
+                    <pre class="brush: bash">
+#!/bin/bash
+
+for subject in $(cat sublist.txt); do
+
+        export subject
+        echo "Submitting $subject"
+        sbatch --job-name=$subject --output=/scratch/seharte_root/seharte99/shared_data/expl/job_output/tractography/$subject-%j_tracto.log tractographySbatch.sh
+
+done
+
+                    </pre>
+
+
+                    <section id="line11" class="section">
 
                         <div class="row">
                             <div class="col-md-12 left-align">
