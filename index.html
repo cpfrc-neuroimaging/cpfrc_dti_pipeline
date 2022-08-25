@@ -122,8 +122,8 @@
                             <li><a href="#line5">Working on Armis</a></li>
                             <li><a href="#line6">dwifslpreproc</a>
                                 <ul class="nav">
-                                    <li><a href="#line6_1">Sbatch Script</a></li>
-                                    <li><a href="#line6_2">Job Script</a></li>
+                                    <li><a href="#line6_1">Preproc Sbatch Script</a></li>
+                                    <li><a href="#line6_2">Preproc Job Script</a></li>
                                 </ul>
                             </li>
                             <li><a href="#line7">Spherical Deconvolution</a></li>
@@ -873,7 +873,7 @@ def runAll(subDir, rawSubDir, rawPath):
                         <p id="line6_1">Lines 1-20 comprise what's known as the sbatch preamble. This is how you request resources from the cluster management system and tell them which account to bill. Enter your email address on line 4 to be notified when the jobs complete, fail or are cancelled. Make sure you enter the faculty member's account you're using on line 7. Next, the script will load the necessary modules. Luckily for us, the <i>module load mrtrix</i> command also loads FSL and CUDA, which are necessary for dwifslpreproc to run in an HPC environment. You can edit the USERNAME on line 30 to whatever you'd like, but it is not strictly necessary. You will need to edit the SOURCE_DIR variable on line 36 to contain the path to your project's "home" directory. Line 40 copies the data from the combined directory to the temporary BIDS directory. Lines 42-55 simply print out some information about the job being executed on Armis. Lines 65-69 contain the actual dwifslpreproc command that we're running. Once it's finished running, the output will be copied to a specified directory on line 75. If all goes well, you should have output data for all subjects at <i>/scratch/seharte_root/seharte99/shared_data/expl/dwifslpreproc</i>
                         </p>
 
-                        <h4>Sbatch Script</h4>
+                        <h4>Preproc Sbatch Script</h4>
 
                         <pre class="brush: bash">
 #!/bin/bash
@@ -959,10 +959,12 @@ rm -rf $TMPDIR
 
                         </pre>
 
+                    <br>
+
                     <p id="line6_2">Running the script above requires the use of what's commonly called a job submit script. It's pretty simple to use, but there are a few key details that should not be overlooked. Take a look at the example below. We have a for-loop that's looping through a text file containing a list of all the subjects we want to run. Make sure that text file is in the same directory as your job script. You don't need to edit lines six or seven. On line eight, you need to tell the script where to spit out the log file. You also need to make sure the directory you point it to is created <i>before</i> you execute the job script. Finally, make sure you include the name of your sbatch script at the end of line eight. To execute this script, type <i>source submitdwifslpreproc.sh</i>. You should see several messages in the terminal indicating that your jobs were submitted to the cluster. You can check the status of your jobs by typing <i>squeue -u your_username</i> in the command window.
                     </p>
 
-                    <h4>Job Script</h4>
+                    <h4>Preproc Job Script</h4>
 
                     <pre class="brush: bash">
 #!/bin/bash
@@ -1577,6 +1579,8 @@ rm -rf $TMPDIR
 
                         </pre>
 
+                    <br>
+
                     <p id="line9_2">This job script functions very similarly to our <i>dwifslpreproc</i> job script. The only differences are the path to the log file on line eight and the name of the sbatch script that's being called (recon_allSbatch.sh). Edit the line eight according to your needs and make sure the sublist.txt file and sbatch script are in the same directory. Execute the job script by typing <i>source recon_allJob.sh</i> in the command window. You'll see several 'job submitted' messages in the command window. Use <i>squeue -u username</i> to check the status of your jobs. You'll also get emailed when each job is completed or fails.
                     </p>
 
@@ -1611,7 +1615,7 @@ done
                         <p>The streamlines we're creating in this section represent the white matter tracts that connect anatomically distinct regions of grey matter. These estimates that MRtrix creates are probabilistically created based on anatomically constrained tractography (ACT). ACT will only label a streamline as valid if it is biologically plausible. For example, an invalid streamline could be one that terminates in CSF and thus is not biologically plausible. We can create the streamlines with MRtrix's <i>tckgen</i> command. We will be creating 10 million streamlines so it will take some time. Sounds like a perfect job for Armis! We will also include <i>tcksift2</i> in our sbatch script. <i>tcksift2</i> serves to correct any overfitting of streamlines that may have happened during the <i>tckgen</i> command. Overfitting can happen when certain tracts have clearer FOD's, thus making them better candidates for the probabalistic modeling that ACT does. <i>tcksift2</i> helps us hedge against that possibility. Download the scripts <a href="scripts/tractography.zip" download="generate_streamlines">here</a>.
                         </p>
 
-                        <p id="#line10_1">Just as in previous sbatch scripts we've created, you will need to edit the email and faculty account in your own script along with the name of the TMPDIR on line 31. You'll notice that lines 40-42 have several <i>rsync</i> commands. We just need three files from each subject's dtiProc directory, so there's no reason to copy the entire directory into our temporary processing directory. The <i>rsync</i> command on line 44 can be uncommented if you've already run <i>tckgen</i> on a subject and you just want to run <i>tcksift2</i>. Lines 69-72 and 76-78 contain our <i>tckgen</i> and <i>tcksift2</i> commands. The output files from our commands will be sent to a directory named 'tractography'. Feel free to tweak the output data's destination. Now that we've got our streamlines, we're ready to put it all together and create our connectome!
+                        <p id="line10_1">Just as in previous sbatch scripts we've created, you will need to edit the email and faculty account in your own script along with the name of the TMPDIR on line 31. You'll notice that lines 40-42 have several <i>rsync</i> commands. We just need three files from each subject's dtiProc directory, so there's no reason to copy the entire directory into our temporary processing directory. The <i>rsync</i> command on line 44 can be uncommented if you've already run <i>tckgen</i> on a subject and you just want to run <i>tcksift2</i>. Lines 69-72 and 76-78 contain our <i>tckgen</i> and <i>tcksift2</i> commands. The output files from our commands will be sent to a directory named 'tractography'. Feel free to tweak the output data's destination. Now that we've got our streamlines, we're ready to put it all together and create our connectome!
                         </p>
 
                         <h4>Streamlines Sbatch Script</h4>
@@ -1706,10 +1710,12 @@ rm -rf $TMPDIR
 
                     </pre>
 
-                    <h4>Streamlines Job Script</h4>
+                    <br>
 
-                    <p id="#line10_2">Our job script here is the same as our previous iterations. Update the log file path and the name of the sbatch file to match your own. Ensure that your sublist.txt file and sbatch script are in the same directory as this job script. Execute this script then sit back and "watch" your streamlines get created! 
+                    <p id="line10_2">Our job script here is the same as our previous iterations. Update the log file path and the name of the sbatch file to match your own. Ensure that your sublist.txt file and sbatch script are in the same directory as this job script. Execute this script then sit back and "watch" your streamlines get created! 
                     </p>
+
+                    <h4>Streamlines Job Script</h4>
 
                     <pre class="brush: bash">
 #!/bin/bash
